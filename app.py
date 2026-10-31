@@ -150,6 +150,16 @@ def health():
 
 # ── YOU BUILD THIS ────────────────────────────────────────────────────────────
 
+MIN_WORDS = 20
+MAX_CHARS = 20_000
+
+
+def _reject(creator_id, error, message, status):
+    """Refuse a request, leave a trace in the audit log, tell the caller why."""
+    audit.log_rejection(creator_id=creator_id, reason=error)
+    return jsonify({"error": error, "message": message}), status
+
+
 @app.post("/submit")
 # @limiter.limit(f"{config.RATE_LIMIT_PER_MINUTE}/minute;{config.RATE_LIMIT_PER_DAY}/day")
 def submit():
@@ -199,17 +209,37 @@ def submit():
     what should this do when `text` is missing, empty, or enormous? A crash on
     a malformed input is one of the most common real failures there is.
     """
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return _reject("unknown", "bad_input",
+                       "Send a JSON object with text and creator_id.", 400)
 
-    # TODO: delete this and build the route.
+    text = payload.get("text")
+    creator_id = payload.get("creator_id")
+
+    if not isinstance(creator_id, str) or not creator_id.strip():
+        return _reject("unknown", "bad_input",
+                       "creator_id is required and must be a non-blank string.", 400)
+    if not isinstance(text, str) or not text.strip():
+        return _reject(creator_id, "bad_input",
+                       "text is required and must be a non-blank string.", 400)
+    if len(text) > MAX_CHARS:
+        return _reject(creator_id, "text_too_large",
+                       f"text is over the {MAX_CHARS:,} character limit.", 413)
+    if len(text.split()) < MIN_WORDS:
+        return _reject(creator_id, "bad_input",
+                       f"text must be at least {MIN_WORDS} words.", 400)
+
+    # Pass 2: input is clean. Still hardcoded until the signal is wired in.
     return jsonify({
-        "error": "not_implemented",
-        "message": "POST /submit isn't built yet — see the TODO in app.py.",
-        "you_sent": {
-            "text_length": len(payload.get("text", "")),
-            "creator_id": payload.get("creator_id"),
-        },
-    }), 501
+        "content_id": "hardcoded-0000",
+        "guess": None,
+        "confidence": None,
+        "label": "PLACEHOLDER",
+        "model_score": 0.5,
+        "style_score": None,
+        "status": "decided",
+    }), 200
 
 
 @app.post("/appeal")
