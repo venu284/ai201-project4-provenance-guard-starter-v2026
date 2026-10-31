@@ -130,11 +130,21 @@
 ```bash
 $ curl -X POST http://127.0.0.1:5000/submit \
   -H "Content-Type: application/json" \
-  -d '{"text": "...", "creator_id": "..."}'
+  -d '{"text": "My grandmother kept a jar of buttons she never used, and every time I visited she tipped it onto the kitchen table so I could sort them by colour. Half were from coats long gone. One, a brass thing with an anchor, she swore came off my grandfather'"'"'s navy jacket, though Dad says he never served.", "creator_id": "demo_writer"}'
 ```
 
-```json
+*Milestone 3 state: only signal one is wired in, so `guess`, `confidence` and `style_score` are `null` and `label` is a placeholder. These are filled in at Milestones 4 and 5.*
 
+```json
+{
+    "confidence": null,
+    "content_id": "2316d85d-47fa-4709-a49b-a03a1571c2a6",
+    "guess": null,
+    "label": "PLACEHOLDER — the real label comes in Milestone 5",
+    "model_score": 0.2276,
+    "status": "decided",
+    "style_score": null
+}
 ```
 
 **An appeal**
@@ -155,8 +165,43 @@ $ curl -X POST http://127.0.0.1:5000/appeal \
 $ curl "http://127.0.0.1:5000/log?limit=3"
 ```
 
-```json
+*The middle entry is a submission of three words that the route refused.*
 
+```json
+{
+    "count": 3,
+    "entries": [
+        {
+            "combined_score": null,
+            "content_id": "2316d85d-47fa-4709-a49b-a03a1571c2a6",
+            "creator_id": "demo_writer",
+            "guess": null,
+            "label": null,
+            "model_score": 0.2276,
+            "status": "decided",
+            "style_score": null,
+            "timestamp": "2026-10-31T19:30:49+00:00"
+        },
+        {
+            "creator_id": "demo_writer",
+            "event": "rejected",
+            "reason": "bad_input",
+            "status": "rejected",
+            "timestamp": "2026-10-31T19:30:49+00:00"
+        },
+        {
+            "combined_score": null,
+            "content_id": "b83e6edd-e35f-4856-8dd7-1950978e47cc",
+            "creator_id": "demo_writer",
+            "guess": null,
+            "label": null,
+            "model_score": 0.8504,
+            "status": "decided",
+            "style_score": null,
+            "timestamp": "2026-10-31T19:30:49+00:00"
+        }
+    ]
+}
 ```
 
 ---
