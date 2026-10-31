@@ -78,9 +78,31 @@
 <!-- Write the rule in words, then give the numbers. What happens when the two
      signals disagree? -->
 
-**The rule:**
+**The rule:** lean human. The combined score is three quarters of the lower of the two scores plus one quarter of the higher. Both signals have to read AI for the result to read AI. If either one reads human, the result is pulled toward human. When the two agree, the result is that same value.
+
+I chose this because a false accusation costs a writer more than a missed AI text costs me, and because signal one scores plain human writing as AI-like, so a plain average over-trusts it.
 
 **The numbers:**
+
+- `config.LOWER_SIGNAL_WEIGHT = 0.75`, so `combined = 0.75 * lower + 0.25 * higher`.
+- Inside the style signal (`stylometry.py`), three measures are flipped so higher means AI, rescaled to 0–1 between two anchor values, then weighted: sentence-length spread 0.40, type-token ratio 0.35 (over 50-word windows), punctuation density 0.25 (commas, semicolons, colons, dashes, brackets, quotes; full stops excluded).
+- The anchors (the raw value that counts as fully human and fully AI) are rough. I set them from a handful of my own paragraphs, so they are not tested yet.
+
+Six paragraphs I wrote or generated for calibration (not real writers' work):
+
+| Text | Signal one | Signal two | Combined |
+|---|---|---|---|
+| Clearly AI | 0.809 | 0.547 | 0.613 |
+| Clearly human (narrative) | 0.303 | 0.189 | 0.218 |
+| Plain human (short, even sentences) | 0.819 | 0.752 | 0.768 |
+| Lightly edited AI | 0.601 | 0.480 | 0.510 |
+| Plain human, uneven sentence lengths | 0.797 | 0.471 | 0.553 |
+| AI padded with rare words | 0.143 | 0.627 | 0.264 |
+
+Clearly AI and clearly human land 0.395 apart. Two things this table shows that I did not want:
+
+- **Plain, even writing scores AI on both signals** (0.768). The combining rule cannot help when both signals agree, so that writer would be accused. The label thresholds in Milestone 5 are the only protection left.
+- **Type-token ratio does not separate AI from human at 50–90 words.** Both sample texts sit at about 0.9, so that measure only moves for repetitive text. Punctuation density also barely separates them. Sentence-length spread does most of the work.
 
 **Where it lives:** `scoring.py::combine_signals`
 
@@ -88,6 +110,10 @@
      somewhere else, say where. -->
 
 **A case where my two signals split, and what my rule does with it:**
+
+A short paragraph of AI-style text padded with rare words ("Contemporary epistemological frameworks increasingly emphasize multifaceted heuristics…"). Signal one reads it as human (0.143), because rare words are hard for gpt2 to predict. Signal two reads it as AI-shaped (0.627), because the sentences are all about the same length. The rule gives 0.75 × 0.143 + 0.25 × 0.627 = 0.264, which is on the human side. That is the price of leaning human: padded AI text gets through.
+
+The reverse split is a plain human paragraph with very uneven sentence lengths: signal one 0.797, signal two 0.471, combined 0.553. A plain average would give 0.634, close to an accusation. The rule puts it in the middle instead.
 
 
 
