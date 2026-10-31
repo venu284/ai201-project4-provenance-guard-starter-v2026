@@ -42,63 +42,53 @@ Two things worth knowing before you pick numbers:
   a **miss**.
 
 ---
-## 1.
+## 1. False positives on my own writing
 
-<!-- Your criterion. It must name a number. -->
-
-
+Of 10 pieces I wrote myself, at most 1 is labelled high-confidence AI, in every one of the three trials. Three of the ten are deliberately plain writing: short sentences, common words.
 
 **Why this target:**
 
-
+On a writing site a wrong accusation costs the writer far more than a missed detection costs the site, so I allow 10% at most. The three plain pieces are there because signal one is known to score plain writing as machine-like; a set made only of my ornate prose would make this target easy to hit, and an easy target tells me nothing.
 
 ---
 
-## 2.
+## 2. Clearly-AI and clearly-human text score far apart
 
-<!-- Your criterion. -->
-
-
+The mean `combined_score` of 5 texts I am confident are AI-generated is at least 0.30 higher than the mean of 5 texts I am confident a person wrote, in every one of the three trials. The ten texts, and why I chose each, will be listed in `scenarios.py` in unit 8.
 
 **Why this target:**
 
-
+0.30 is the width of the unsure band (0.35 to 0.65). If the two groups sit closer together than the band is wide, no choice of threshold can separate them and the labels would be close to random.
 
 ---
 
-## 3.
+## 3. All three labels are reachable
 
-<!-- Your criterion. -->
-
-
+Across 9 inputs (3 clearly AI, 3 clearly human, 3 borderline), all three labels appear at least once, and at least 2 of the 3 borderline inputs get the unsure label, in every one of the three trials. Which texts I judged borderline, and why, will be listed in `scenarios.py`.
 
 **Why this target:**
 
-
+A label no score can produce is a design bug, not a setting. Requiring borderline text to land in "unsure" checks that the middle label means something and is not just a leftover gap between two thresholds.
 
 ---
 
-## 4.
+## 4. An appeal always changes status and always gets recorded
 
-<!-- Your criterion. -->
-
-
+For 5 submissions, each followed by an appeal on its `content_id`: all 5 appeals return 200 with `status: "under_review"` and add exactly one entry to the audit log carrying the same `content_id`. An appeal with a `content_id` that was never issued returns 404 and writes no `under_review` entry. Unit 8 will say whether I extended `scenarios.py` for this or tested it by hand.
 
 **Why this target:**
 
-
+The appeal is the only thing between a wrong accusation and nothing at all, so it has to work every time, not usually. The 404 half guards the most common silent failure: a mistyped id that looks like a broken endpoint.
 
 ---
 
-## 5.
+## 5. Bad input never crashes the service
 
-<!-- Your criterion. -->
-
-
+Eight malformed submissions all return a 400 or 413, none returns a 500, and each leaves a rejection entry in the audit log. The eight: `text` missing, `text` empty, `text` whitespace only, `text` null, `text` a number instead of a string, a 19-word text, a 50,000-word text, and `creator_id` missing.
 
 **Why this target:**
 
-
+A crash on malformed input is one of the most common real failures, and one 500 already means the route trusts its input. The log requirement is there because a rejected request that leaves no trace looks identical to a quiet afternoon, and an attack that shows up only as an absence can never be diagnosed.
 
 ---
 
