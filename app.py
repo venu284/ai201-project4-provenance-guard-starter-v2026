@@ -30,6 +30,7 @@ from flask import Flask, jsonify, request
 
 import audit
 import config
+import detector
 
 app = Flask(__name__)
 
@@ -230,13 +231,31 @@ def submit():
         return _reject(creator_id, "bad_input",
                        f"text must be at least {MIN_WORDS} words.", 400)
 
-    # Pass 2: input is clean. Still hardcoded until the signal is wired in.
+    try:
+        model_score = detector.model_signal(text)
+    except detector.DetectorUnavailable:
+        return _reject(creator_id, "detector_unavailable",
+                       "The scoring model isn't available right now. Try again later.", 503)
+    except ValueError:
+        return _reject(creator_id, "bad_input",
+                       "text is too short to score.", 400)
+
+    content_id = str(uuid.uuid4())
+
+    # Milestone 3: one signal. guess, confidence, label and style_score stay
+    # placeholders until Milestones 4 and 5 fill them in.
+    audit.log_decision(
+        content_id=content_id,
+        creator_id=creator_id,
+        model_score=model_score,
+    )
+
     return jsonify({
-        "content_id": "hardcoded-0000",
+        "content_id": content_id,
         "guess": None,
         "confidence": None,
-        "label": "PLACEHOLDER",
-        "model_score": 0.5,
+        "label": "PLACEHOLDER — the real label comes in Milestone 5",
+        "model_score": model_score,
         "style_score": None,
         "status": "decided",
     }), 200
