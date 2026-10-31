@@ -155,6 +155,7 @@ def health():
 
 MIN_WORDS = 20
 MAX_CHARS = 20_000
+MAX_REASONING_CHARS = 2_000
 
 
 def _reject(creator_id, error, message, status):
@@ -274,7 +275,7 @@ def submit():
 @app.post("/appeal")
 def appeal():
     """
-    A writer says you got it wrong. ← TODO — Milestone 5
+    A writer says you got it wrong.
 
     Expects JSON:
         {"content_id": "...", "reasoning": "..."}
@@ -291,14 +292,45 @@ def appeal():
     to the person on the other end. It's the only thing standing between a
     wrong accusation and nothing at all.
     """
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return _reject("unknown", "bad_input",
+                       "Send a JSON object with content_id and reasoning.", 400)
 
-    # TODO: delete this and build the route.
+    content_id = payload.get("content_id")
+    reasoning = payload.get("reasoning")
+
+    if not isinstance(content_id, str) or not content_id.strip():
+        return _reject("unknown", "bad_input",
+                       "content_id is required and must be a non-blank string.", 400)
+    if not isinstance(reasoning, str) or not reasoning.strip():
+        return _reject("unknown", "bad_input",
+                       "reasoning is required and must be a non-blank string.", 400)
+    if len(reasoning) > MAX_REASONING_CHARS:
+        return _reject("unknown", "bad_input",
+                       f"reasoning is over the {MAX_REASONING_CHARS:,} character limit.", 400)
+
+    # The original decision is the entry for this id with no `event` key; an
+    # earlier appeal or rejection for the same id does not count as one.
+    content_id = content_id.strip()
+    decisions = [e for e in audit.entries_for(content_id)
+                 if "event" not in e and e.get("status") == "decided"]
+    if not decisions:
+        return _reject("unknown", "unknown_content_id",
+                       "No submission with that content_id was found.", 404)
+
+    # The appeal is filed under the original writer, not whoever sent this request.
+    audit.log_appeal(
+        content_id=content_id,
+        creator_id=decisions[0]["creator_id"],
+        reasoning=reasoning.strip(),
+    )
+
     return jsonify({
-        "error": "not_implemented",
-        "message": "POST /appeal isn't built yet — see the TODO in app.py.",
-        "you_sent": payload,
-    }), 501
+        "content_id": content_id,
+        "status": "under_review",
+        "message": "Your appeal is recorded. A person will look at it.",
+    }), 200
 
 
 # ── Already works ─────────────────────────────────────────────────────────────
