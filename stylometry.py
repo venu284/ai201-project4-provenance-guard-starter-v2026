@@ -53,16 +53,21 @@ def words(text: str) -> list[str]:
 TTR_WINDOW = 50  # words per window; see type_token_ratio
 
 # Anchors for rescaling: the raw value that counts as fully human (0.0) and the
-# raw value that counts as fully AI (1.0). Set from the Milestone 4 calibration
-# texts, so they are rough. Unit 8 is where they get tested properly.
-SPREAD_HUMAN, SPREAD_AI = 0.70, 0.20
+# raw value that counts as fully AI (1.0).
+#
+# Spread anchors were re-fit on 12 of 24 independently written test texts (the
+# odd-numbered files); the other 12 were held out to check the change. AI text
+# in that set sat at spread 0.22-0.51 and messy human text at 0.66-0.89, so the
+# human end is 0.60. The type-token and punctuation anchors are still rough
+# first guesses from six paragraphs and have not been re-fit.
+SPREAD_HUMAN, SPREAD_AI = 0.60, 0.25
 TTR_HUMAN, TTR_AI = 0.90, 0.70
 PUNCT_HUMAN, PUNCT_AI = 0.15, 0.03
 
-# How much each measure counts inside the style signal. Punctuation gets the
-# least: it varies with genre and with the writer's habits more than with who
-# wrote the text.
-WEIGHT_SPREAD, WEIGHT_TTR, WEIGHT_PUNCT = 0.40, 0.35, 0.25
+# How much each measure counts inside the style signal. Spread does nearly all
+# the separating on real text; type-token ratio and punctuation mostly pick out
+# plain, simple writing, so they count for less.
+WEIGHT_SPREAD, WEIGHT_TTR, WEIGHT_PUNCT = 0.60, 0.25, 0.15
 
 NEUTRAL = 0.5  # what a measure says when it has nothing to measure
 
