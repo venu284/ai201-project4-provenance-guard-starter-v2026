@@ -85,24 +85,30 @@ I chose this because a false accusation costs a writer more than a missed AI tex
 **The numbers:**
 
 - `config.LOWER_SIGNAL_WEIGHT = 0.75`, so `combined = 0.75 * lower + 0.25 * higher`.
-- Inside the style signal (`stylometry.py`), three measures are flipped so higher means AI, rescaled to 0–1 between two anchor values, then weighted: sentence-length spread 0.40, type-token ratio 0.35 (over 50-word windows), punctuation density 0.25 (commas, semicolons, colons, dashes, brackets, quotes; full stops excluded).
-- The anchors (the raw value that counts as fully human and fully AI) are rough. I set them from a handful of my own paragraphs, so they are not tested yet.
+- Inside the style signal (`stylometry.py`), three measures are flipped so higher means AI, rescaled to 0–1 between two anchor values, then weighted: sentence-length spread 0.60, type-token ratio 0.25 (over 50-word windows), punctuation density 0.15 (commas, semicolons, colons, dashes, brackets, quotes; full stops excluded).
+- The anchors (the raw value that counts as fully human and fully AI) are rough. The first version came from six paragraphs of mine. A separate agent then wrote 24 texts (16 genuine AI, 8 imitation human). I re-fit the sentence-length anchors (human end 0.60, AI end 0.25) on half of them and checked the other half. The type-token and punctuation anchors were not re-fit.
 
-Six paragraphs I wrote or generated for calibration (not real writers' work):
+Six paragraphs I wrote or generated for calibration (not real writers' work), scored with the current constants:
 
 | Text | Signal one | Signal two | Combined |
 |---|---|---|---|
-| Clearly AI | 0.809 | 0.547 | 0.613 |
-| Clearly human (narrative) | 0.303 | 0.189 | 0.218 |
-| Plain human (short, even sentences) | 0.819 | 0.752 | 0.768 |
-| Lightly edited AI | 0.601 | 0.480 | 0.510 |
-| Plain human, uneven sentence lengths | 0.797 | 0.471 | 0.553 |
-| AI padded with rare words | 0.143 | 0.627 | 0.264 |
+| Clearly AI | 0.809 | 0.688 | 0.719 |
+| Clearly human (narrative) | 0.303 | 0.103 | 0.153 |
+| Plain human (short, even sentences) | 0.819 | 0.765 | 0.778 |
+| Lightly edited AI | 0.601 | 0.631 | 0.609 |
+| Plain human, uneven sentence lengths | 0.797 | 0.315 | 0.435 |
+| AI padded with rare words | 0.143 | 0.750 | 0.295 |
 
-Clearly AI and clearly human land 0.395 apart. Two things this table shows that I did not want:
+Clearly AI and clearly human land 0.566 apart on these. On the agent's 24 texts the held-out half (12 texts, not used to set the anchors) moved only a little after the re-fit: ordinary AI went from a mean style score of 0.501 to 0.528, messy human stayed low (0.123), and no group changed label. A wider anchor setting I tried first (human end 0.45) pushed some AI text into the human label on both halves, so I dropped it.
 
-- **Plain, even writing scores AI on both signals** (0.768). The combining rule cannot help when both signals agree, so that writer would be accused. The label thresholds in Milestone 5 are the only protection left.
-- **Type-token ratio does not separate AI from human at 50–90 words.** Both sample texts sit at about 0.9, so that measure only moves for repetitive text. Punctuation density also barely separates them. Sentence-length spread does most of the work.
+What the 24 texts show that I did not want:
+
+- **Plain, even writing scores AI on both signals.** All three plain human imitations scored 0.79–0.80 combined, about as high as plain AI (0.77–0.91) and well above ordinary AI (mean 0.61). The combining rule cannot help when both signals agree, so that writer would be accused. The label thresholds in Milestone 5 are the only protection left.
+- **Signal two measures evenness and simplicity, not authorship.** Ordinary AI and formal human writing both score near the middle on it. It cleanly separates only messy, lumpy writing from the rest.
+- **Type-token ratio and punctuation density do not separate AI from human at 100–250 words.** They only pick out plain, simple text. Sentence-length spread does most of the work.
+- **Ordinary AI text mostly lands in the middle.** On the held-out half, 3 of 4 ordinary AI texts were "unsure" and 1 reached the AI label.
+
+The human texts in that set were written by an AI imitating human writing, and each group has only two to four texts, so treat these as a stress test, not a measurement.
 
 **Where it lives:** `scoring.py::combine_signals`
 
@@ -111,9 +117,9 @@ Clearly AI and clearly human land 0.395 apart. Two things this table shows that 
 
 **A case where my two signals split, and what my rule does with it:**
 
-A short paragraph of AI-style text padded with rare words ("Contemporary epistemological frameworks increasingly emphasize multifaceted heuristics…"). Signal one reads it as human (0.143), because rare words are hard for gpt2 to predict. Signal two reads it as AI-shaped (0.627), because the sentences are all about the same length. The rule gives 0.75 × 0.143 + 0.25 × 0.627 = 0.264, which is on the human side. That is the price of leaning human: padded AI text gets through.
+A short paragraph of AI-style text padded with rare words ("Contemporary epistemological frameworks increasingly emphasize multifaceted heuristics…"). Signal one reads it as human (0.143), because rare words are hard for gpt2 to predict. Signal two reads it as AI-shaped (0.750), because the sentences are all about the same length. The rule gives 0.75 × 0.143 + 0.25 × 0.750 = 0.295, which is on the human side. That is the price of leaning human: padded AI text gets through.
 
-The reverse split is a plain human paragraph with very uneven sentence lengths: signal one 0.797, signal two 0.471, combined 0.553. A plain average would give 0.634, close to an accusation. The rule puts it in the middle instead.
+The reverse split is a plain human paragraph with very uneven sentence lengths: signal one 0.797, signal two 0.315, combined 0.435. A plain average would give 0.556. The rule moves it toward human, but it is still in the middle, not clearly human.
 
 
 
