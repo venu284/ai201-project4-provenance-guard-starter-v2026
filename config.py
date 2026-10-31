@@ -72,8 +72,15 @@ LOWER_SIGNAL_WEIGHT = 0.75
 # getting through. There is no setting that avoids the trade — only settings
 # that decide who pays for it.
 
-HUMAN_THRESHOLD = 0.35
-AI_THRESHOLD = 0.65
+# Chosen from 24 test texts scored with both signals (combined score):
+#   messy human .15-.21 | edited AI .35-.62 | formal human .44-.63
+#   ordinary AI .49-.73 | plain human .79-.80 | plain AI .77-.91
+# Plain human and plain AI overlap, so no threshold separates them. 0.85 keeps
+# the plain human texts in "unsure", at the price that most AI text is "unsure"
+# too. The margin over .80 is thin and rests on three imitation human texts.
+# A score exactly at HUMAN_THRESHOLD is "unsure"; at AI_THRESHOLD it is "ai".
+HUMAN_THRESHOLD = 0.30
+AI_THRESHOLD = 0.85
 
 # ⚠️ One thing that catches people out in Milestone 5. A weighted average can
 # only land between its two inputs — so while `style_signal` is still the stub

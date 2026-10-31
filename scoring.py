@@ -67,10 +67,25 @@ def combine_signals(model_score: float, style_score: float) -> float:
     return round(w * low + (1 - w) * high, 4)
 
 
+LABEL_TEXT = {
+    "human": "We think this was probably written by a person.",
+    "unsure": (
+        "We can't tell whether this was written by a person or with help from AI. "
+        "Plain, simple writing often lands here, and so does a lot of ordinary human "
+        "writing. Nothing has been decided about you. If you'd like a person to take "
+        "a look, you can appeal."
+    ),
+    "ai": (
+        "This may have been written with the help of AI, but we can be wrong. "
+        "Plain, simple writing by a person can look like this. If you wrote it "
+        "yourself, you can appeal and a person will review it."
+    ),
+}
+
+
 def score_to_label(score: float) -> tuple[str, str]:
     """
     Turn a score into a guess and the text a reader actually sees.
-    ← TODO (Milestone 5)
 
     Returns:
         (guess, label_text) — where `guess` is a short machine-readable string
@@ -93,12 +108,25 @@ def score_to_label(score: float) -> tuple[str, str]:
     think if they got it on their own work. That question is the whole
     milestone.
     """
-    # TODO: replace this — thresholds are in config.py
     if score >= config.AI_THRESHOLD:
-        return "ai", "PLACEHOLDER — write the high-confidence AI label."
-    if score <= config.HUMAN_THRESHOLD:
-        return "human", "PLACEHOLDER — write the high-confidence human label."
-    return "unsure", "PLACEHOLDER — write the unsure label."
+        return "ai", LABEL_TEXT["ai"]
+    if score < config.HUMAN_THRESHOLD:
+        return "human", LABEL_TEXT["human"]
+    return "unsure", LABEL_TEXT["unsure"]
+
+
+def confidence_for(guess: str, score: float) -> float:
+    """
+    How sure the service is of its own guess, 0.5–1.0 for unsure and ai/human.
+
+    The combined score if the guess is "ai"; 1 minus it if "human"; and for
+    "unsure" whichever side the score leans to.
+    """
+    if guess == "ai":
+        return round(score, 4)
+    if guess == "human":
+        return round(1 - score, 4)
+    return round(max(score, 1 - score), 4)
 
 
 def label_ranges() -> list[tuple[str, str]]:
