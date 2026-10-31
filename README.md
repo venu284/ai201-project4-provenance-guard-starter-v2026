@@ -39,7 +39,13 @@
 <!-- The path a submission takes, from arriving to the label a reader sees.
      Six or seven steps — this is the trace you wrote in Milestone 1. -->
 
-
+1. **Request arrives.** A writer or script sends `text` and `creator_id` to `POST /submit`. In unit 8 a rate limiter checks the caller first and logs a rejection if it refuses.
+2. **The route validates.** `text` must be a string of at least 20 words and at most 20,000 characters, and `creator_id` must be non-blank. Bad input gets a 400 or 413 and a logged rejection. This step adds a clean input and a new `content_id`.
+3. **Signal one (`detector.py`).** A local gpt2 model reads up to 400 tokens and measures how predictable the text is. This step adds `model_score`.
+4. **Signal two (`stylometry.py`).** Measures the shape of the text: sentence-length spread, vocabulary repetition, punctuation density. This step adds `style_score`.
+5. **Combine (`scoring.py::combine_signals`).** One rule turns the two scores into a single `combined_score` from 0 (human) to 1 (AI).
+6. **Label (`scoring.py::score_to_label`).** The score is compared to two thresholds and mapped to one of three sentences. This step adds `guess`, `label` and `confidence`.
+7. **Log and answer.** `audit.log_decision` writes all nine fields with status `decided`, and the response goes back to the caller. If the writer disagrees, `POST /appeal` appends an `under_review` entry for the same `content_id`.
 
 ---
 
@@ -53,19 +59,19 @@
 
 ### Signal one — the model signal
 
-**What it measures:**
+**What it measures:** how predictable the text is to a small language model (gpt2) running on my own machine, as perplexity, squashed to a 0–1 score where higher means more likely AI.
 
-**Why that might differ between human and AI writing:**
+**Why that might differ between human and AI writing:** a language model writes by choosing likely next words, so its output is easy for a model to predict. Human writing wanders more: odd word choices, specific details, abrupt turns.
 
-**What it can't see:**
+**What it can't see:** who wrote it. Predictability is not authorship. It rewards common words in short, ordinary sentences, so a second-language writer, a younger writer, or anyone writing plainly scores about as machine-like as a machine does. Dense, rare-word prose scores as human, so AI text padded with rare words can slip through. It also reads only the first 400 tokens.
 
 ### Signal two — the style signal
 
-**What it measures:**
+**What it measures:** the shape of the text without reading it: how much sentence length varies, how much of the vocabulary repeats, and how much punctuation there is.
 
-**Why that might differ between human and AI writing:**
+**Why that might differ between human and AI writing:** generated prose tends toward even, mid-length sentences and a narrower vocabulary. Human prose is lumpier, with a three-word sentence next to a forty-word one.
 
-**What it can't see:**
+**What it can't see:** what the text says. Typos, broken-up sentences, or a pasted quotation change the shape without changing who wrote it, and that is cheap to do on purpose. Vocabulary repetition also falls as text gets longer, so short and long texts are not directly comparable, and a plain human writer with even sentences looks AI-shaped here too.
 
 ### The combining rule
 
