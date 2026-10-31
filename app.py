@@ -31,6 +31,8 @@ from flask import Flask, jsonify, request
 import audit
 import config
 import detector
+import scoring
+import stylometry
 
 app = Flask(__name__)
 
@@ -166,7 +168,7 @@ def _reject(creator_id, error, message, status):
 def submit():
     """
     Take a piece of text, decide about it, log the decision, answer.
-    ← TODO — Milestones 3, 4 and 5
+    Built through Milestone 4; the real label is Milestone 5.
 
     Expects JSON:
         {"text": "...", "creator_id": "..."}
@@ -240,14 +242,19 @@ def submit():
         return _reject(creator_id, "bad_input",
                        "text is too short to score.", 400)
 
+    style_score = stylometry.style_signal(text)
+    combined_score = scoring.combine_signals(model_score, style_score)
+
     content_id = str(uuid.uuid4())
 
-    # Milestone 3: one signal. guess, confidence, label and style_score stay
-    # placeholders until Milestones 4 and 5 fill them in.
+    # Milestone 4: both signals and the combined score are logged and returned.
+    # guess, confidence and label stay placeholders until Milestone 5.
     audit.log_decision(
         content_id=content_id,
         creator_id=creator_id,
         model_score=model_score,
+        style_score=style_score,
+        combined_score=combined_score,
     )
 
     return jsonify({
@@ -256,7 +263,8 @@ def submit():
         "confidence": None,
         "label": "PLACEHOLDER — the real label comes in Milestone 5",
         "model_score": model_score,
-        "style_score": None,
+        "style_score": style_score,
+        "combined_score": combined_score,
         "status": "decided",
     }), 200
 
