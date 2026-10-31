@@ -18,7 +18,7 @@ doesn't, it's the service itself.
 Routes:
 
     POST /ping        the worked example. Already works. Don't edit it
-    POST /submit      ← YOU BUILD THIS (Milestone 3, 4, 5)
+    POST /submit      score a piece of text, label it, log it
     POST /appeal      ← YOU BUILD THIS (Milestone 5)
     GET  /log         the audit log. Already works
     GET  /health      is the service up, and is the model loaded
@@ -168,7 +168,7 @@ def _reject(creator_id, error, message, status):
 def submit():
     """
     Take a piece of text, decide about it, log the decision, answer.
-    Built through Milestone 4; the real label is Milestone 5.
+    Runs both signals, combines them, labels the result, logs it and answers.
 
     Expects JSON:
         {"text": "...", "creator_id": "..."}
@@ -244,24 +244,26 @@ def submit():
 
     style_score = stylometry.style_signal(text)
     combined_score = scoring.combine_signals(model_score, style_score)
+    guess, label = scoring.score_to_label(combined_score)
+    confidence = scoring.confidence_for(guess, combined_score)
 
     content_id = str(uuid.uuid4())
 
-    # Milestone 4: both signals and the combined score are logged and returned.
-    # guess, confidence and label stay placeholders until Milestone 5.
     audit.log_decision(
         content_id=content_id,
         creator_id=creator_id,
+        guess=guess,
         model_score=model_score,
         style_score=style_score,
         combined_score=combined_score,
+        label=label,
     )
 
     return jsonify({
         "content_id": content_id,
-        "guess": None,
-        "confidence": None,
-        "label": "PLACEHOLDER — the real label comes in Milestone 5",
+        "guess": guess,
+        "confidence": confidence,
+        "label": label,
         "model_score": model_score,
         "style_score": style_score,
         "combined_score": combined_score,
