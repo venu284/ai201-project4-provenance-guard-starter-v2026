@@ -21,7 +21,7 @@ import config
 
 def combine_signals(model_score: float, style_score: float) -> float:
     """
-    Combine two 0–1 signals into one 0–1 score. ← TODO (Milestone 4)
+    Combine two 0–1 signals into one 0–1 score.
 
     Both inputs point the same way: higher means more likely AI. Your output
     should too.
@@ -49,14 +49,22 @@ def combine_signals(model_score: float, style_score: float) -> float:
       - Milestone 4 asks you to find a case where your two signals split and
         write it down. That case is what this rule exists to handle.
 
-    The weights in config.py are placeholders. Change them, or ignore them and
-    write a different rule.
+    The rule, in words (written before it was coded): "Lean human. The combined
+    score is 0.75 x the lower of the two scores + 0.25 x the higher. Both
+    signals must read AI for the result to read AI. If either reads human, the
+    result is pulled toward human."
+
+    Why: a false accusation costs more than a missed AI text (Milestone 1).
+    Signal one scores plain human writing as AI-like, so an equal average would
+    over-trust it. When the signals agree, the result is that same value. When
+    they split, the lower one decides most of it. The price: AI text that one
+    signal reads as human (rare-word padding, for example) gets through.
+
+    The 0.75 is `config.LOWER_SIGNAL_WEIGHT`.
     """
-    # TODO: replace this
-    return (
-        config.WEIGHT_MODEL_SIGNAL * model_score
-        + config.WEIGHT_STYLE_SIGNAL * style_score
-    )
+    low, high = sorted((model_score, style_score))
+    w = config.LOWER_SIGNAL_WEIGHT
+    return round(w * low + (1 - w) * high, 4)
 
 
 def score_to_label(score: float) -> tuple[str, str]:

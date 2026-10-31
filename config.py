@@ -50,12 +50,13 @@ DETECTOR_MAX_TOKENS = 400
 # ─── Scoring (Milestone 4) ───────────────────────────────────────────────────
 # How much each signal counts toward the combined score.
 #
-# ⚠️ These are placeholders. Milestone 4 asks you to write your combining rule
-# down BEFORE you code it, and to put the numbers in your README. Whatever you
-# decide, it goes here.
+# The rule is "lean human": the combined score is
+#   LOWER_SIGNAL_WEIGHT * (the lower signal) + (1 - LOWER_SIGNAL_WEIGHT) * (the higher)
+# so both signals have to read AI for the result to read AI. 0.5 would be a
+# plain average; 1.0 would ignore the higher signal completely. The rule itself
+# is in scoring.py::combine_signals.
 
-WEIGHT_MODEL_SIGNAL = 0.5
-WEIGHT_STYLE_SIGNAL = 0.5
+LOWER_SIGNAL_WEIGHT = 0.75
 
 
 # ─── Thresholds (Milestone 5) ────────────────────────────────────────────────
