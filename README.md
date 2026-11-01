@@ -40,12 +40,12 @@
      Six or seven steps — this is the trace you wrote in Milestone 1. -->
 
 1. **Request arrives.** A writer or script sends `text` and `creator_id` to `POST /submit`. In unit 8 a rate limiter checks the caller first and logs a rejection if it refuses.
-2. **The route validates.** `text` must be a string of at least 20 words and at most 20,000 characters, and `creator_id` must be non-blank. Bad input gets a 400 or 413 and a logged rejection. This step adds a clean input and a new `content_id`.
-3. **Signal one (`detector.py`).** A local gpt2 model reads up to 400 tokens and measures how predictable the text is. This step adds `model_score`.
+2. **The route validates.** `text` must be a string of at least 20 words and at most 20,000 characters, and `creator_id` must be non-blank. Bad input gets a 400 or 413 and a logged rejection. This step adds a clean input.
+3. **Signal one (`detector.py`).** A local gpt2 model reads up to 400 tokens and measures how predictable the text is. If the model can't load, the route answers 503 and logs a rejection. This step adds `model_score`.
 4. **Signal two (`stylometry.py`).** Measures the shape of the text: sentence-length spread, vocabulary repetition, punctuation density. This step adds `style_score`.
-5. **Combine (`scoring.py::combine_signals`).** One rule turns the two scores into a single `combined_score` from 0 (human) to 1 (AI).
-6. **Label (`scoring.py::score_to_label`).** The score is compared to two thresholds and mapped to one of three sentences. This step adds `guess`, `label` and `confidence`.
-7. **Log and answer.** `audit.log_decision` writes all nine fields with status `decided`, and the response goes back to the caller. If the writer disagrees, `POST /appeal` appends an `under_review` entry for the same `content_id`.
+5. **Combine (`scoring.py::combine_signals`).** One rule, leaning toward whichever signal reads more human, turns the two scores into a single `combined_score` from 0 (human) to 1 (AI).
+6. **Label (`scoring.py::score_to_label`).** Below 0.30 is "human", 0.85 and above is "AI", and everything between is "unsure". Each maps to one plain sentence. This step adds `guess`, `label` and `confidence`.
+7. **Log and answer.** The submission gets a new `content_id`, `audit.log_decision` writes all nine fields with status `decided`, and the response goes back to the caller. If the writer asks for a review, `POST /appeal` checks the `content_id` exists and appends an `under_review` entry beside the original decision, filed under the original writer.
 
 ---
 
@@ -71,7 +71,7 @@
 
 **Why that might differ between human and AI writing:** generated prose tends toward even, mid-length sentences and a narrower vocabulary. Human prose is lumpier, with a three-word sentence next to a forty-word one.
 
-**What it can't see:** what the text says. Typos, broken-up sentences, or a pasted quotation change the shape without changing who wrote it, and that is cheap to do on purpose. Vocabulary repetition also falls as text gets longer, so short and long texts are not directly comparable, and a plain human writer with even sentences looks AI-shaped here too.
+**What it can't see:** what the text says. Typos, broken-up sentences, or a pasted quotation change the shape without changing who wrote it, and that is cheap to do on purpose. Vocabulary repetition falls as text gets longer; I measure it over 50-word windows to soften that, but short and long texts still aren't perfectly comparable. Most of all, a plain human writer with even sentences looks AI-shaped here too. In testing, this signal turned out to measure how even and simple the writing is, not who wrote it (see the numbers below).
 
 ### The combining rule
 
@@ -240,17 +240,17 @@ $ curl "http://127.0.0.1:5000/log?limit=2"
 
 ## How I Used AI
 
-**Moment 1**
+**Moment 1 — testing the style signal**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* My first calibration used six paragraphs I wrote myself, which I didn't trust. I asked a separate Claude agent to write 24 test texts and score them with my two signals. There were 16 AI texts in different genres and 8 imitations of human writing (messy, plain and formal). I also asked it to tell me what was wrong with my style signal.
+- *What came back:* A table of scores and a critique. My style signal gave ordinary AI text a middling score, because my anchors came from my own six paragraphs. It suggested re-anchoring sentence-length spread to 0.45 (human) and 0.25 (AI), and cutting the weight on type-token ratio and punctuation.
+- *What I changed:* I didn't take the numbers as given. I split the 24 texts in half, tried the suggestion on one half and checked it on the other. The 0.45 anchor pushed ordinary and lightly edited AI text into the "human" label, so I rejected it. I used 0.60 / 0.25 instead, which kept every group's label and raised ordinary AI's style score a little. I kept the weight cut. In this README I also say that the agent's "human" texts are imitations, not real writers.
 
-**Moment 2**
+**Moment 2 — reading the labels as a writer**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* I gave a fresh Claude agent only my three label texts, with no explanation of the system. I asked it, as the writer, what each one says about them and what they would do next. It answered twice: once as someone who wrote every word, and once as someone who used AI. I told it not to rewrite them.
+- *What came back:* The human label was fine. The unsure label was mostly reassuring, but "plain, simple writing" read as a mild insult, and "nothing has been decided about you" sounded like a decision was coming. The AI label read as an accusation with a hedge. "If you wrote it yourself" sounded like doubt and put the burden of proof on the writer. It also asked whether spell-check counts as "help of AI".
+- *What I changed:* I reworded both labels myself. The unsure label now says plainly that it is "not a finding against you". The AI label drops "If you wrote it yourself", says spell-check and grammar tools don't count, and says anyone can ask for a review. Both say "ask for a review" instead of "appeal", which sounded like a court. I changed the `/appeal` confirmation to "Your review request is recorded" so the reply matches the label.
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
