@@ -70,15 +70,16 @@ def combine_signals(model_score: float, style_score: float) -> float:
 LABEL_TEXT = {
     "human": "We think this was probably written by a person.",
     "unsure": (
-        "We can't tell whether this was written by a person or with help from AI. "
-        "Plain, simple writing often lands here, and so does a lot of ordinary human "
-        "writing. Nothing has been decided about you. If you'd like a person to take "
-        "a look, you can appeal."
+        "We can't tell whether this was written by a person or by an AI tool. "
+        "This is not a finding against you: our check often can't tell, and many "
+        "people's own writing gets this result. If you'd like a person to read it, "
+        "you can ask for a review."
     ),
     "ai": (
-        "This may have been written with the help of AI, but we can be wrong. "
-        "Plain, simple writing by a person can look like this. If you wrote it "
-        "yourself, you can appeal and a person will review it."
+        "Our check thinks this may have been mostly written by an AI tool, though "
+        "spell-check and grammar tools don't count. It is often wrong, especially "
+        "on plain writing by people, and this is not a final decision. Anyone can "
+        "ask for a review, and a person will read it."
     ),
 }
 
