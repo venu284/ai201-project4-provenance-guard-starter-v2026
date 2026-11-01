@@ -113,7 +113,9 @@ def punctuation_density(text: str) -> float:
     """
     Punctuation marks per word, full stops excluded. Higher = more human.
 
-    Counts commas, semicolons, colons, dashes, brackets and quotation marks.
+    Counts commas, semicolons, colons, round brackets, double quotation marks
+    (straight or curly), en and em dashes, and "--". Hyphens inside words and
+    apostrophes are not counted.
     Full stops, question marks and exclamation marks are left out because
     nearly every writer uses them at the same rate; the others are where
     writers differ. About 0.03 is spare prose; 0.15 is heavily punctuated.

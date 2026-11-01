@@ -65,7 +65,7 @@ LOWER_SIGNAL_WEIGHT = 0.75
 #
 #   score < HUMAN_THRESHOLD          -> high-confidence human
 #   between the two                  -> unsure
-#   score > AI_THRESHOLD             -> high-confidence AI
+#   score >= AI_THRESHOLD            -> high-confidence AI
 #
 # ⚠️ This is where your false-positive decision from Milestone 1 actually gets
 # made. Widening the unsure band means fewer wrong accusations and more AI text

@@ -44,7 +44,7 @@
 3. **Signal one (`detector.py`).** A local gpt2 model reads up to 400 tokens and measures how predictable the text is. If the model can't load, the route answers 503 and logs a rejection. This step adds `model_score`.
 4. **Signal two (`stylometry.py`).** Measures the shape of the text: sentence-length spread, vocabulary repetition, punctuation density. This step adds `style_score`.
 5. **Combine (`scoring.py::combine_signals`).** One rule, leaning toward whichever signal reads more human, turns the two scores into a single `combined_score` from 0 (human) to 1 (AI).
-6. **Label (`scoring.py::score_to_label`).** Below 0.30 is "human", 0.85 and above is "AI", and everything between is "unsure". Each maps to one plain sentence. This step adds `guess`, `label` and `confidence`.
+6. **Label (`scoring.py::score_to_label`).** Below 0.30 is "human", 0.85 and above is "AI", and everything between is "unsure". Each maps to a short plain-language message. `score_to_label` adds `guess` and `label`, and `scoring.py::confidence_for` adds `confidence`.
 7. **Log and answer.** The submission gets a new `content_id`, `audit.log_decision` writes all nine fields with status `decided`, and the response goes back to the caller. If the writer asks for a review, `POST /appeal` checks the `content_id` exists and appends an `under_review` entry beside the original decision, filed under the original writer.
 
 ---
@@ -59,7 +59,7 @@
 
 ### Signal one — the model signal
 
-**What it measures:** how predictable the text is to a small language model (gpt2) running on my own machine, as perplexity, squashed to a 0–1 score where higher means more likely AI.
+**What it measures:** how predictable the text is to a small language model (gpt2) running on my own machine, as perplexity, squashed to a 0–1 score where higher means more likely AI. The squash is the starter's, unchanged: perplexity 45 scores 0.5, lower perplexity scores higher, and a steepness of 1.6 sets how fast it moves either side of 45.
 
 **Why that might differ between human and AI writing:** a language model writes by choosing likely next words, so its output is easy for a model to predict. Human writing wanders more: odd word choices, specific details, abrupt turns.
 
@@ -71,7 +71,7 @@
 
 **Why that might differ between human and AI writing:** generated prose tends toward even, mid-length sentences and a narrower vocabulary. Human prose is lumpier, with a three-word sentence next to a forty-word one.
 
-**What it can't see:** what the text says. Typos, broken-up sentences, or a pasted quotation change the shape without changing who wrote it, and that is cheap to do on purpose. Vocabulary repetition falls as text gets longer; I measure it over 50-word windows to soften that, but short and long texts still aren't perfectly comparable. Most of all, a plain human writer with even sentences looks AI-shaped here too. In testing, this signal turned out to measure how even and simple the writing is, not who wrote it (see the numbers below).
+**What it can't see:** what the text says. Typos, broken-up sentences, or a pasted quotation change the shape without changing who wrote it, and that is cheap to do on purpose. Longer text repeats more of its words, so the share of new words falls with length; I measure it over 50-word windows to soften that, but short and long texts still aren't perfectly comparable. Most of all, a plain human writer with even sentences looks AI-shaped here too. In testing, this signal turned out to measure how even and simple the writing is, not who wrote it (see the numbers below).
 
 ### The combining rule
 
@@ -85,10 +85,10 @@ I chose this because a false accusation costs a writer more than a missed AI tex
 **The numbers:**
 
 - `config.LOWER_SIGNAL_WEIGHT = 0.75`, so `combined = 0.75 * lower + 0.25 * higher`.
-- Inside the style signal (`stylometry.py`), three measures are flipped so higher means AI, rescaled to 0–1 between two anchor values, then weighted: sentence-length spread 0.60, type-token ratio 0.25 (over 50-word windows), punctuation density 0.15 (commas, semicolons, colons, dashes, brackets, quotes; full stops excluded).
-- The anchors (the raw value that counts as fully human and fully AI) are rough. The first version came from six paragraphs of mine. A separate agent then wrote 24 texts (16 genuine AI, 8 imitation human). I re-fit the sentence-length anchors (human end 0.60, AI end 0.25) on half of them and checked the other half. The type-token and punctuation anchors were not re-fit.
+- Inside the style signal (`stylometry.py`), three measures are flipped so higher means AI, rescaled to 0–1 between two anchor values, then weighted: sentence-length spread 0.60, type-token ratio 0.25 (over 50-word windows), punctuation density 0.15 (commas, semicolons, colons, round brackets, double quotes, en and em dashes; full stops, hyphens and apostrophes excluded).
+- The anchors (the raw value that counts as fully human and fully AI) are rough. The first version came from six short calibration paragraphs (the table below). A separate agent then wrote 24 texts (16 genuine AI, 8 imitation human). I re-fit the sentence-length anchors (human end 0.60, AI end 0.25) on half of them and checked the other half. The type-token anchors (0.90 human, 0.70 AI) and punctuation anchors (0.15 human, 0.03 AI, in marks per word) were not re-fit.
 
-Six paragraphs I wrote or generated for calibration (not real writers' work), scored with the current constants:
+Six paragraphs written for calibration (not real writers' work), scored with the current constants. Combined is computed from the unrounded signal scores, so redoing the formula on the rounded numbers can be off in the last digit.
 
 | Text | Signal one | Signal two | Combined |
 |---|---|---|---|
@@ -106,7 +106,7 @@ What the 24 texts show that I did not want:
 - **Plain, even writing scores AI on both signals.** All three plain human imitations scored 0.79–0.80 combined, about as high as plain AI (0.77–0.91) and well above ordinary AI (mean 0.61). The combining rule cannot help when both signals agree, so that writer would be accused. The label thresholds are the only protection left; see Label Variants.
 - **Signal two measures evenness and simplicity, not authorship.** Ordinary AI and formal human writing both score near the middle on it. It cleanly separates only messy, lumpy writing from the rest.
 - **Type-token ratio and punctuation density do not separate AI from human at 100–250 words.** They only pick out plain, simple text. Sentence-length spread does most of the work.
-- **Ordinary AI text mostly lands in the middle.** On the held-out half, 3 of 4 ordinary AI texts were "unsure" and 1 reached the AI label.
+- **Ordinary AI text lands in the middle.** All eight ordinary AI texts scored 0.49–0.73 combined, so with the final thresholds (Label Variants) every one of them is "unsure".
 
 The human texts in that set were written by an AI imitating human writing, and each group has only two to four texts, so treat these as a stress test, not a measurement.
 
@@ -138,7 +138,20 @@ The reverse split is a plain human paragraph with very uneven sentence lengths: 
 | unsure | 0.30 – 0.85 (from 0.30 up to, not including, 0.85) | We can't tell whether this was written by a person or by an AI tool. This is not a finding against you: our check often can't tell, and many people's own writing gets this result. If you'd like a person to read it, you can ask for a review. |
 | high-confidence AI | 0.85 – 1.00 (0.85 and above) | Our check thinks this may have been mostly written by an AI tool, though spell-check and grammar tools don't count. It is often wrong, especially on plain writing by people, and this is not a final decision. Anyone can ask for a review, and a person will read it. |
 
-The score is the combined score from the rule above. All three labels are reachable: in a live run, a messy personal paragraph scored 0.15 (human), an ordinary AI paragraph 0.49 (unsure) and a plain AI paragraph 0.90 (AI).
+The score is the combined score from the rule above.
+
+All three labels are reachable. The three request bodies are committed in `samples/`: a messy personal paragraph, an ordinary AI paragraph and a plain AI paragraph, all written by an AI for testing. These were run on the live service; the responses are cut to the scoring fields (the full shape is in Sample Run). I restored the audit log afterwards so it holds only the Sample Run below.
+
+```
+$ curl -s -X POST http://127.0.0.1:5000/submit -H "Content-Type: application/json" -d @samples/human_messy.json
+{"guess": "human", "confidence": 0.8492, "model_score": 0.3976, "style_score": 0.0685, "combined_score": 0.1508}
+$ curl -s -X POST http://127.0.0.1:5000/submit -H "Content-Type: application/json" -d @samples/ai_ordinary.json
+{"guess": "unsure", "confidence": 0.5117, "model_score": 0.6961, "style_score": 0.419, "combined_score": 0.4883}
+$ curl -s -X POST http://127.0.0.1:5000/submit -H "Content-Type: application/json" -d @samples/ai_plain.json
+{"guess": "ai", "confidence": 0.9045, "model_score": 0.8858, "style_score": 0.9605, "combined_score": 0.9045}
+```
+
+`confidence` is how sure the service is of its own guess. For "human" it is 1 minus the combined score, for "AI" it is the combined score, and for "unsure" it is whichever side the score leans to. So "unsure" with confidence 0.80 means it leans AI but not far enough to say so.
 
 The AI label is rare by design. Most AI text, and all the plain human text I tested, lands in "unsure". The 0.85 line is only 0.05 above the highest plain human text I tried (0.80), and those texts were imitations written by an AI, so a real plain writer could cross it.
 
@@ -242,7 +255,7 @@ $ curl "http://127.0.0.1:5000/log?limit=2"
 
 **Moment 1 — testing the style signal**
 
-- *What I asked for:* My first calibration used six paragraphs I wrote myself, which I didn't trust. I asked a separate Claude agent to write 24 test texts and score them with my two signals. There were 16 AI texts in different genres and 8 imitations of human writing (messy, plain and formal). I also asked it to tell me what was wrong with my style signal.
+- *What I asked for:* My first calibration used only six short paragraphs, which I didn't trust. I asked a separate Claude agent to write 24 test texts and score them with my two signals. There were 16 AI texts in different genres and 8 imitations of human writing (messy, plain and formal). I also asked it to tell me what was wrong with my style signal.
 - *What came back:* A table of scores and a critique. My style signal gave ordinary AI text a middling score, because my anchors came from my own six paragraphs. It suggested re-anchoring sentence-length spread to 0.45 (human) and 0.25 (AI), and cutting the weight on type-token ratio and punctuation.
 - *What I changed:* I didn't take the numbers as given. I split the 24 texts in half, tried the suggestion on one half and checked it on the other. The 0.45 anchor pushed ordinary and lightly edited AI text into the "human" label, so I rejected it. I used 0.60 / 0.25 instead, which kept every group's label and raised ordinary AI's style score a little. I kept the weight cut. In this README I also say that the agent's "human" texts are imitations, not real writers.
 
@@ -380,16 +393,16 @@ that produced it:
 
      SUBMISSION CHECKLIST — unit 7
 
-       [ ] criteria.md has five numbered criteria, each naming a target
-       [ ] Each has a reason underneath
-       [ ] POST /submit returns content_id, guess, confidence, label,
+       [x] criteria.md has five numbered criteria, each naming a target
+       [x] Each has a reason underneath
+       [x] POST /submit returns content_id, guess, confidence, label,
            model_score and style_score
-       [ ] Two signals that measure DIFFERENT things, each with a named blind spot
-       [ ] Three label variants, all reachable, written out in full
-       [ ] POST /appeal changes status and writes to the log
-       [ ] Signals and Scoring names scoring.py::combine_signals
-       [ ] Sample Run: a submission AND an appeal, as pasted text
-       [ ] At least four new commits
+       [x] Two signals that measure DIFFERENT things, each with a named blind spot
+       [x] Three label variants, all reachable, written out in full
+       [x] POST /appeal changes status and writes to the log
+       [x] Signals and Scoring names scoring.py::combine_signals
+       [x] Sample Run: a submission AND an appeal, as pasted text
+       [x] At least four new commits
        [ ] Repository URL submitted — WRITE IT DOWN
 
      SUBMISSION CHECKLIST — unit 8
