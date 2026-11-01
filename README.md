@@ -103,7 +103,7 @@ Clearly AI and clearly human land 0.566 apart on these. On the agent's 24 texts 
 
 What the 24 texts show that I did not want:
 
-- **Plain, even writing scores AI on both signals.** All three plain human imitations scored 0.79–0.80 combined, about as high as plain AI (0.77–0.91) and well above ordinary AI (mean 0.61). The combining rule cannot help when both signals agree, so that writer would be accused. The label thresholds in Milestone 5 are the only protection left.
+- **Plain, even writing scores AI on both signals.** All three plain human imitations scored 0.79–0.80 combined, about as high as plain AI (0.77–0.91) and well above ordinary AI (mean 0.61). The combining rule cannot help when both signals agree, so that writer would be accused. The label thresholds are the only protection left; see Label Variants.
 - **Signal two measures evenness and simplicity, not authorship.** Ordinary AI and formal human writing both score near the middle on it. It cleanly separates only messy, lumpy writing from the rest.
 - **Type-token ratio and punctuation density do not separate AI from human at 100–250 words.** They only pick out plain, simple text. Sentence-length spread does most of the work.
 - **Ordinary AI text mostly lands in the middle.** On the held-out half, 3 of 4 ordinary AI texts were "unsure" and 1 reached the AI label.
@@ -134,16 +134,19 @@ The reverse split is a plain human paragraph with very uneven sentence lengths: 
 
 | Label | Score range | The exact text a reader sees |
 |---|---|---|
-| high-confidence human |  |  |
-| unsure |  |  |
-| high-confidence AI |  |  |
+| high-confidence human | 0.00 – 0.30 (below 0.30) | We think this was probably written by a person. |
+| unsure | 0.30 – 0.85 (from 0.30 up to, not including, 0.85) | We can't tell whether this was written by a person or by an AI tool. This is not a finding against you: our check often can't tell, and many people's own writing gets this result. If you'd like a person to read it, you can ask for a review. |
+| high-confidence AI | 0.85 – 1.00 (0.85 and above) | Our check thinks this may have been mostly written by an AI tool, though spell-check and grammar tools don't count. It is often wrong, especially on plain writing by people, and this is not a final decision. Anyone can ask for a review, and a person will read it. |
+
+The score is the combined score from the rule above. All three labels are reachable: in a live run, a messy personal paragraph scored 0.15 (human), an ordinary AI paragraph 0.49 (unsure) and a plain AI paragraph 0.90 (AI).
+
+The AI label is rare by design. Most AI text, and all the plain human text I tested, lands in "unsure". The 0.85 line is only 0.05 above the highest plain human text I tried (0.80), and those texts were imitations written by an AI, so a real plain writer could cross it.
 
 **Why I worded the "unsure" one this way:**
-<!-- It's the hardest of the three. It has to admit uncertainty without
-     sounding like an accusation, because the person reading it may well have
-     written every word themselves. -->
 
+The person reading it may have written every word themselves. So it says first that we don't know, and then says outright that this is "not a finding against you." I had a fresh reader go through my first draft as the writer. They said my line about plain, simple writing sounded like a mild insult, and "nothing has been decided about you" sounded like a decision was coming, so both went. It says "AI tool" rather than "AI", and "ask for a review" rather than "appeal", which sounded like a court. It still tells the reader what they can do next.
 
+The AI label got the same treatment. My first draft said "If you wrote it yourself", which the same reader heard as doubt and as putting the burden of proof on them. It now says anyone can ask for a review, that spell-check and grammar tools don't count, and that the check is often wrong on plain writing by people.
 
 ---
 
@@ -159,78 +162,75 @@ The reverse split is a plain human paragraph with very uneven sentence lengths: 
      two off the response, so leaving them out costs you next unit's
      diagnostics. -->
 
+The text is a plain, simple paragraph of the kind a younger or second-language writer might write. An AI wrote it as a test imitation, so it is not a real writer's work. It scores high on both signals and lands in "unsure".
+
 ```bash
 $ curl -X POST http://127.0.0.1:5000/submit \
   -H "Content-Type: application/json" \
-  -d '{"text": "My grandmother kept a jar of buttons she never used, and every time I visited she tipped it onto the kitchen table so I could sort them by colour. Half were from coats long gone. One, a brass thing with an anchor, she swore came off my grandfather'"'"'s navy jacket, though Dad says he never served.", "creator_id": "demo_writer"}'
+  -d '{"text": "Our school has a garden. It is behind the main building. Every spring the students plant vegetables there. This year our class planted carrots, beans and tomatoes. We worked in groups of four. My group planted the beans.\n\nFirst we dug the soil. It was hard work and our hands got dirty. Then we put the seeds in small holes. We gave them water every day. After two weeks the beans were growing. I was very happy to see them.\n\nThe teacher said that plants need sun and water to grow. She also said that gardens help the bees. I did not know this before. Now I want to have a garden at my house too. My grandmother has a small yard, so I will ask her. I think it is a good idea. Plants make the world beautiful and we can eat them too.", "creator_id": "demo_writer"}'
 ```
-
-*Milestone 3 state: only signal one is wired in, so `guess`, `confidence` and `style_score` are `null` and `label` is a placeholder. These are filled in at Milestones 4 and 5.*
 
 ```json
 {
-    "confidence": null,
-    "content_id": "2316d85d-47fa-4709-a49b-a03a1571c2a6",
-    "guess": null,
-    "label": "PLACEHOLDER — the real label comes in Milestone 5",
-    "model_score": 0.2276,
+    "combined_score": 0.7957,
+    "confidence": 0.7957,
+    "content_id": "76e920f6-86e0-4b1d-98d8-435fb8305b76",
+    "guess": "unsure",
+    "label": "We can't tell whether this was written by a person or by an AI tool. This is not a finding against you: our check often can't tell, and many people's own writing gets this result. If you'd like a person to read it, you can ask for a review.",
+    "model_score": 0.7975,
     "status": "decided",
-    "style_score": null
+    "style_score": 0.7951
 }
 ```
 
 **An appeal**
 
+The reasoning is written as the imagined writer of that paragraph might put it.
+
 ```bash
 $ curl -X POST http://127.0.0.1:5000/appeal \
   -H "Content-Type: application/json" \
-  -d '{"content_id": "...", "reasoning": "..."}'
+  -d '{"content_id": "76e920f6-86e0-4b1d-98d8-435fb8305b76", "reasoning": "I wrote this myself. English is my second language, and I write short, simple sentences."}'
 ```
 
 ```json
-
+{
+    "content_id": "76e920f6-86e0-4b1d-98d8-435fb8305b76",
+    "message": "Your appeal is recorded. A person will look at it.",
+    "status": "under_review"
+}
 ```
 
 **What the log shows afterwards**
 
 ```bash
-$ curl "http://127.0.0.1:5000/log?limit=3"
+$ curl "http://127.0.0.1:5000/log?limit=2"
 ```
 
-*The middle entry is a submission of three words that the route refused.*
+*The first entry is the original decision, unchanged. The second is the appeal, filed under the same writer and `content_id`, with status `under_review`.*
 
 ```json
 {
-    "count": 3,
+    "count": 2,
     "entries": [
         {
-            "combined_score": null,
-            "content_id": "2316d85d-47fa-4709-a49b-a03a1571c2a6",
+            "combined_score": 0.7957,
+            "content_id": "76e920f6-86e0-4b1d-98d8-435fb8305b76",
             "creator_id": "demo_writer",
-            "guess": null,
-            "label": null,
-            "model_score": 0.2276,
+            "guess": "unsure",
+            "label": "We can't tell whether this was written by a person or by an AI tool. This is not a finding against you: our check often can't tell, and many people's own writing gets this result. If you'd like a person to read it, you can ask for a review.",
+            "model_score": 0.7975,
             "status": "decided",
-            "style_score": null,
-            "timestamp": "2026-10-31T19:30:49+00:00"
+            "style_score": 0.7951,
+            "timestamp": "2026-11-01T04:44:16+00:00"
         },
         {
+            "content_id": "76e920f6-86e0-4b1d-98d8-435fb8305b76",
             "creator_id": "demo_writer",
-            "event": "rejected",
-            "reason": "bad_input",
-            "status": "rejected",
-            "timestamp": "2026-10-31T19:30:49+00:00"
-        },
-        {
-            "combined_score": null,
-            "content_id": "b83e6edd-e35f-4856-8dd7-1950978e47cc",
-            "creator_id": "demo_writer",
-            "guess": null,
-            "label": null,
-            "model_score": 0.8504,
-            "status": "decided",
-            "style_score": null,
-            "timestamp": "2026-10-31T19:30:49+00:00"
+            "event": "appeal",
+            "reasoning": "I wrote this myself. English is my second language, and I write short, simple sentences.",
+            "status": "under_review",
+            "timestamp": "2026-11-01T04:44:16+00:00"
         }
     ]
 }
