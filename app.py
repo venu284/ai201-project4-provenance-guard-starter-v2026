@@ -329,7 +329,7 @@ def appeal():
     return jsonify({
         "content_id": content_id,
         "status": "under_review",
-        "message": "Your appeal is recorded. A person will look at it.",
+        "message": "Your review request is recorded. A person will read it.",
     }), 200
 
 

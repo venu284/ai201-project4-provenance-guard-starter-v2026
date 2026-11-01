@@ -174,7 +174,7 @@ $ curl -X POST http://127.0.0.1:5000/submit \
 {
     "combined_score": 0.7957,
     "confidence": 0.7957,
-    "content_id": "76e920f6-86e0-4b1d-98d8-435fb8305b76",
+    "content_id": "3f583ab5-c278-4e77-a7ee-fe49cc6af854",
     "guess": "unsure",
     "label": "We can't tell whether this was written by a person or by an AI tool. This is not a finding against you: our check often can't tell, and many people's own writing gets this result. If you'd like a person to read it, you can ask for a review.",
     "model_score": 0.7975,
@@ -190,13 +190,13 @@ The reasoning is written as the imagined writer of that paragraph might put it.
 ```bash
 $ curl -X POST http://127.0.0.1:5000/appeal \
   -H "Content-Type: application/json" \
-  -d '{"content_id": "76e920f6-86e0-4b1d-98d8-435fb8305b76", "reasoning": "I wrote this myself. English is my second language, and I write short, simple sentences."}'
+  -d '{"content_id": "3f583ab5-c278-4e77-a7ee-fe49cc6af854", "reasoning": "I wrote this myself. English is my second language, and I write short, simple sentences."}'
 ```
 
 ```json
 {
-    "content_id": "76e920f6-86e0-4b1d-98d8-435fb8305b76",
-    "message": "Your appeal is recorded. A person will look at it.",
+    "content_id": "3f583ab5-c278-4e77-a7ee-fe49cc6af854",
+    "message": "Your review request is recorded. A person will read it.",
     "status": "under_review"
 }
 ```
@@ -215,22 +215,22 @@ $ curl "http://127.0.0.1:5000/log?limit=2"
     "entries": [
         {
             "combined_score": 0.7957,
-            "content_id": "76e920f6-86e0-4b1d-98d8-435fb8305b76",
+            "content_id": "3f583ab5-c278-4e77-a7ee-fe49cc6af854",
             "creator_id": "demo_writer",
             "guess": "unsure",
             "label": "We can't tell whether this was written by a person or by an AI tool. This is not a finding against you: our check often can't tell, and many people's own writing gets this result. If you'd like a person to read it, you can ask for a review.",
             "model_score": 0.7975,
             "status": "decided",
             "style_score": 0.7951,
-            "timestamp": "2026-11-01T04:44:16+00:00"
+            "timestamp": "2026-11-01T04:49:27+00:00"
         },
         {
-            "content_id": "76e920f6-86e0-4b1d-98d8-435fb8305b76",
+            "content_id": "3f583ab5-c278-4e77-a7ee-fe49cc6af854",
             "creator_id": "demo_writer",
             "event": "appeal",
             "reasoning": "I wrote this myself. English is my second language, and I write short, simple sentences.",
             "status": "under_review",
-            "timestamp": "2026-11-01T04:44:16+00:00"
+            "timestamp": "2026-11-01T04:49:27+00:00"
         }
     ]
 }
