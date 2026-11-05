@@ -109,6 +109,7 @@ if config.RATE_LIMITING_ENABLED:
         audit.log_rejection(
             creator_id=payload.get("creator_id", "unknown"),
             reason="rate_limited",
+            http_status=429,
             limit=str(exc.description),
         )
         return jsonify({
@@ -160,7 +161,7 @@ MAX_REASONING_CHARS = 2_000
 
 def _reject(creator_id, error, message, status):
     """Refuse a request, leave a trace in the audit log, tell the caller why."""
-    audit.log_rejection(creator_id=creator_id, reason=error)
+    audit.log_rejection(creator_id=creator_id, reason=error, http_status=status)
     return jsonify({"error": error, "message": message}), status
 
 
@@ -324,6 +325,7 @@ def appeal():
         content_id=content_id,
         creator_id=decisions[0]["creator_id"],
         reasoning=reasoning.strip(),
+        original=decisions[0],
     )
 
     return jsonify({

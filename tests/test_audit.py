@@ -57,3 +57,43 @@ def test_extra_fields_are_written():
     entry = audit.log_rejection(creator_id="w", reason="rate_limited", limit="10/minute")
     assert entry["limit"] == "10/minute"
     assert audit.read_entries()[0]["limit"] == "10/minute"
+
+
+# ── every entry type carries the nine keys (unit 8, M1) ──────────────────────
+
+DECISION_FIELDS = ("guess", "model_score", "style_score", "combined_score", "label")
+
+
+def test_nine_keys_come_first_and_in_the_same_order_on_every_entry_type():
+    audit.log_decision(content_id="c1", creator_id="w", guess="human", model_score=0.1,
+                       style_score=0.2, combined_score=0.15, label="L")
+    audit.log_appeal(content_id="c1", creator_id="w", reasoning="r")
+    audit.log_rejection(creator_id="w", reason="bad_input", http_status=400)
+    order = list(audit.NINE_FIELDS)
+    for entry in audit.read_entries():
+        assert list(entry)[:9] == order
+
+
+def test_rejection_has_all_nine_keys_with_nulls_for_what_never_happened():
+    entry = audit.log_rejection(creator_id="w", reason="bad_input", http_status=400)
+    assert audit.NINE_FIELDS == tuple(list(entry)[:9])
+    assert entry["status"] == "rejected"
+    assert entry["content_id"] is None
+    assert all(entry[f] is None for f in DECISION_FIELDS)
+    assert (entry["event"], entry["reason"], entry["http_status"]) == ("rejected", "bad_input", 400)
+
+
+def test_appeal_copies_the_decision_so_the_line_stands_alone():
+    original = audit.log_decision(content_id="c1", creator_id="w", guess="unsure",
+                                  model_score=0.7, style_score=0.4, combined_score=0.475,
+                                  label="L")
+    entry = audit.log_appeal(content_id="c1", creator_id="w", reasoning="mine", original=original)
+    for field in DECISION_FIELDS:
+        assert entry[field] == original[field]
+    assert (entry["status"], entry["event"], entry["reasoning"]) == ("under_review", "appeal", "mine")
+
+
+def test_appeal_without_an_original_still_has_all_nine_keys():
+    entry = audit.log_appeal(content_id="c1", creator_id="w", reasoning="r")
+    assert tuple(list(entry)[:9]) == audit.NINE_FIELDS
+    assert all(entry[f] is None for f in DECISION_FIELDS)

@@ -113,6 +113,8 @@ def test_bad_input_is_refused_and_logged(client, model_score, name, body, status
     assert entries[0]["event"] == "rejected"
     assert entries[0]["status"] == "rejected"
     assert entries[0]["reason"] == r.get_json()["error"]
+    assert entries[0]["http_status"] == status
+    assert tuple(list(entries[0])[:9]) == audit.NINE_FIELDS
 
 
 @pytest.mark.parametrize("raw", ["not json at all", "[1, 2, 3]", '"just a string"', "42", "null", ""])
@@ -163,6 +165,7 @@ def test_model_unavailable_is_a_503_and_is_logged(client, model_score, good_body
     assert r.get_json()["error"] == "detector_unavailable"
     entry = audit.read_entries()[0]
     assert (entry["event"], entry["reason"]) == ("rejected", "detector_unavailable")
+    assert entry["http_status"] == 503
 
 
 def test_model_value_error_is_a_400(client, model_score, good_body):

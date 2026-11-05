@@ -32,6 +32,29 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+# The nine fields every entry carries, in this order. A rejection or an appeal
+# fills the ones that apply and leaves the rest null, so every line in the log
+# has the same first nine keys and can be read without knowing its type.
+NINE_FIELDS = ("timestamp", "content_id", "creator_id", "guess", "model_score",
+               "style_score", "combined_score", "label", "status")
+
+
+def _base(creator_id, status, content_id=None, guess=None, model_score=None,
+          style_score=None, combined_score=None, label=None) -> dict:
+    """The nine fields, in order. Anything not given is null."""
+    return {
+        "timestamp": _now(),
+        "content_id": content_id,
+        "creator_id": creator_id,
+        "guess": guess,
+        "model_score": model_score,
+        "style_score": style_score,
+        "combined_score": combined_score,
+        "label": label,
+        "status": status,
+    }
+
+
 def log_decision(
     content_id: str,
     creator_id: str,
@@ -58,22 +81,15 @@ def log_decision(
     Anything extra you pass gets written too — useful for `rejected` entries in
     unit 8, where there's no decision but you still want the trace.
     """
-    entry = {
-        "timestamp": _now(),
-        "content_id": content_id,
-        "creator_id": creator_id,
-        "guess": guess,
-        "model_score": model_score,
-        "style_score": style_score,
-        "combined_score": combined_score,
-        "label": label,
-        "status": status,
-    }
+    entry = _base(creator_id, status, content_id=content_id, guess=guess,
+                  model_score=model_score, style_score=style_score,
+                  combined_score=combined_score, label=label)
     entry.update(extra)
     return _append(entry)
 
 
-def log_appeal(content_id: str, creator_id: str, reasoning: str) -> dict:
+def log_appeal(content_id: str, creator_id: str, reasoning: str,
+               original: dict | None = None) -> dict:
     """
     Record an appeal beside the original decision.
 
@@ -81,15 +97,20 @@ def log_appeal(content_id: str, creator_id: str, reasoning: str) -> dict:
     decision stays exactly where it was and the appeal sits after it — which is
     the whole point of an audit log. Someone reading it later can see what was
     decided, that it was challenged, and in what order.
+
+    Pass the original decision entry as `original` and its guess, scores and
+    label are copied onto the appeal, so this one line says what was decided
+    and that it is now under review.
     """
-    return _append({
-        "timestamp": _now(),
-        "content_id": content_id,
-        "creator_id": creator_id,
-        "event": "appeal",
-        "status": "under_review",
-        "reasoning": reasoning,
-    })
+    original = original or {}
+    entry = _base(
+        creator_id, "under_review", content_id=content_id,
+        guess=original.get("guess"), model_score=original.get("model_score"),
+        style_score=original.get("style_score"),
+        combined_score=original.get("combined_score"), label=original.get("label"),
+    )
+    entry.update({"event": "appeal", "reasoning": reasoning})
+    return _append(entry)
 
 
 def log_rejection(creator_id: str, reason: str, **extra) -> dict:
@@ -101,15 +122,14 @@ def log_rejection(creator_id: str, reason: str, **extra) -> dict:
     **an attack that shows up only as an absence is one you'll never find.** A
     thousand requests that got a 429 and left no trace look exactly like a
     quiet afternoon.
+
+    Carries the same nine fields as a decision, null where nothing was decided
+    (no content_id, guess, scores or label), plus `event`, `reason`, and
+    whatever the caller adds, such as `http_status`.
     """
-    return _append({
-        "timestamp": _now(),
-        "creator_id": creator_id,
-        "event": "rejected",
-        "status": "rejected",
-        "reason": reason,
-        **extra,
-    })
+    entry = _base(creator_id, "rejected")
+    entry.update({"event": "rejected", "reason": reason, **extra})
+    return _append(entry)
 
 
 def _append(entry: dict) -> dict:

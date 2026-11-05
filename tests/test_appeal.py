@@ -108,3 +108,19 @@ def test_malformed_appeals_are_400_and_write_no_under_review_entry(client, body)
 @pytest.mark.parametrize("raw", ["nope", "[1]", "7"])
 def test_appeal_body_that_is_not_an_object_is_400(client, raw):
     assert client.post("/appeal", data=raw, content_type="application/json").status_code == 400
+
+
+def test_appeal_entry_carries_the_original_scores_and_label(client, model_score):
+    cid = submit_one(client, model_score)
+    original = audit.entries_for(cid)[0]
+    appeal(client, cid)
+    entry = audit.read_entries()[-1]
+    assert tuple(list(entry)[:9]) == audit.NINE_FIELDS
+    for field in ("guess", "model_score", "style_score", "combined_score", "label"):
+        assert entry[field] == original[field]
+
+
+def test_appeal_rejections_carry_the_http_status(client):
+    appeal(client, "nope")
+    entry = audit.read_entries()[-1]
+    assert (entry["event"], entry["http_status"]) == ("rejected", 404)
