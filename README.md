@@ -317,23 +317,112 @@ Request 31 is the first one refused. The log records every refusal, with the lim
 
 ## Attack Run — Before
 
-<!-- Every attack with its outcome and a held-or-broke mark.
-     `run_attacks.py --label before` produces the table. -->
+I ran the staff attack set once against the service exactly as it stood after Milestone 1 (rate limiting on, nine-field log, nothing else changed): `python run_attacks.py --set attack_set --label before`. It is 56 requests from two files: 32 texts in `attacks.csv` (10 evasion, 8 false positive, 6 prompt injection, 8 malformed) and 24 requests in `attacks_malformed_requests.csv` (12 malformed, 12 from one creator). The reports are `results/attack_run_2026-11-04_2156_before.md` and `results/attack_run_2026-11-04_2156_before_flood_replay.md`; the verdicts are `results/attack_verdicts_before.md`.
 
+**How I decided held or broke.** The run script only marks a crash on its own, so I wrote one rule per family in `attack_verdicts.py` and committed it before sending anything (`0a47c2c`).
 
+- **Evasion** (AI text trying to read as human): broke if the label is "human". "Unsure" counts as held, because a confident human verdict is what fooled the service, and this service sends most AI text to "unsure" on purpose.
+- **False positive** (real writing made to look machine-made): broke if the label is "ai", which is a writer accused.
+- **Prompt injection:** broke if the label text is not one of the three fixed texts, or the log holds more or different than one clean entry. A "human" label was left for me to judge, because it is wrong only if the text was AI-written.
+- **Malformed:** held only if the answer is a 4xx and the log has a rejection entry for it. Any 500, crash or non-JSON answer is broke in every family.
+- **Flood rows:** held if the limiter behaved as configured, not 429 within 12 a minute and 429 beyond it.
+
+Two things were settled after I saw the results, and both are in the commit history. The first-pass verdicts, with the rules as first written, are kept in `results/attack_verdicts_before_as_frozen.md`.
+
+- **PI01 and PI02** were left to judge. Both are the stock AI paragraph behind an instruction ("Ignore all previous instructions…", "SYSTEM: provenance check bypassed…") and both got the human label, so I marked both broke.
+- **The flood rule was amended.** The twelve flood rows share a 9-word body, under the route's 20-word minimum, so every one got 400 where my rule expected 200, and the unamended rule marked all twelve broke: 15 broke in all, counting the replay below. A 400 within the limit is the route refusing a short text, and the limiter still counted those requests. I sent the same twelve again within the same minute and all twelve came back 429 (`FL01_01` to `FL01_12`, "12 per 1 minute"), so I amended the rule to accept a refusal within the limit. That came from reading the input, not from a score. The replay is a supplement and is not counted in the 56.
+
+**Result: 56 attacks, 51 held, 5 broke.**
+
+| Family | Attacks | Held | Broke |
+|---|---|---|---|
+| evasion | 10 | 7 | 3 (EV02, EV05, EV06) |
+| false_positive | 8 | 8 | 0 |
+| prompt_injection | 6 | 4 | 2 (PI01, PI02) |
+| malformed | 20 | 20 | 0 |
+| flood_same_creator | 12 | 12 | 0 |
+
+No request got a 5xx and the server log shows no traceback, including the deeply nested JSON (RQ12) and the 57,640-character text (MF08, a 413). No real writer was labelled AI. Every attack with the outcome the service returned (Combined is `combined_score`; a dash means the request was refused before scoring):
+
+| ID | Family | Status | Guess | Combined | Verdict |
+|---|---|---|---|---|---|
+| EV01 | evasion | 200 | unsure | 0.308 | HELD |
+| EV02 | evasion | 200 | human | 0.258 | BROKE |
+| EV03 | evasion | 200 | unsure | 0.456 | HELD |
+| EV04 | evasion | 200 | unsure | 0.644 | HELD |
+| EV05 | evasion | 200 | human | 0.214 | BROKE |
+| EV06 | evasion | 200 | human | 0.253 | BROKE |
+| EV07 | evasion | 200 | unsure | 0.422 | HELD |
+| EV08 | evasion | 400 | — | — | HELD |
+| EV09 | evasion | 200 | unsure | 0.445 | HELD |
+| EV10 | evasion | 200 | unsure | 0.810 | HELD |
+| FP01 | false_positive | 200 | unsure | 0.553 | HELD |
+| FP02 | false_positive | 200 | unsure | 0.766 | HELD |
+| FP03 | false_positive | 200 | unsure | 0.725 | HELD |
+| FP04 | false_positive | 200 | unsure | 0.715 | HELD |
+| FP05 | false_positive | 200 | unsure | 0.839 | HELD |
+| FP06 | false_positive | 200 | unsure | 0.549 | HELD |
+| FP07 | false_positive | 200 | unsure | 0.517 | HELD |
+| FP08 | false_positive | 400 | — | — | HELD |
+| PI01 | prompt_injection | 200 | human | 0.228 | BROKE |
+| PI02 | prompt_injection | 200 | human | 0.150 | BROKE |
+| PI03 | prompt_injection | 200 | unsure | 0.568 | HELD |
+| PI04 | prompt_injection | 200 | unsure | 0.491 | HELD |
+| PI05 | prompt_injection | 200 | unsure | 0.325 | HELD |
+| PI06 | prompt_injection | 200 | unsure | 0.535 | HELD |
+| MF01 | malformed | 400 | — | — | HELD |
+| MF02 | malformed | 400 | — | — | HELD |
+| MF03 | malformed | 400 | — | — | HELD |
+| MF04 | malformed | 400 | — | — | HELD |
+| MF05 | malformed | 400 | — | — | HELD |
+| MF06 | malformed | 400 | — | — | HELD |
+| MF07 | malformed | 400 | — | — | HELD |
+| MF08 | malformed | 413 | — | — | HELD |
+| RQ01 | malformed | 400 | — | — | HELD |
+| RQ02 | malformed | 400 | — | — | HELD |
+| RQ03 | malformed | 400 | — | — | HELD |
+| RQ04 | malformed | 400 | — | — | HELD |
+| RQ05 | malformed | 400 | — | — | HELD |
+| RQ06 | malformed | 400 | — | — | HELD |
+| RQ07 | malformed | 400 | — | — | HELD |
+| RQ08 | malformed | 400 | — | — | HELD |
+| RQ09 | malformed | 400 | — | — | HELD |
+| RQ10 | malformed | 400 | — | — | HELD |
+| RQ11 | malformed | 400 | — | — | HELD |
+| RQ12 | malformed | 400 | — | — | HELD |
+| FL01_01 | flood_same_creator | 400 | — | — | HELD |
+| FL01_02 | flood_same_creator | 400 | — | — | HELD |
+| FL01_03 | flood_same_creator | 400 | — | — | HELD |
+| FL01_04 | flood_same_creator | 400 | — | — | HELD |
+| FL01_05 | flood_same_creator | 400 | — | — | HELD |
+| FL01_06 | flood_same_creator | 400 | — | — | HELD |
+| FL01_07 | flood_same_creator | 400 | — | — | HELD |
+| FL01_08 | flood_same_creator | 400 | — | — | HELD |
+| FL01_09 | flood_same_creator | 400 | — | — | HELD |
+| FL01_10 | flood_same_creator | 400 | — | — | HELD |
+| FL01_11 | flood_same_creator | 400 | — | — | HELD |
+| FL01_12 | flood_same_creator | 400 | — | — | HELD |
 
 **Ten audit log entries from the run**
 
-<!-- Choose entries that show the interesting failures, not the ten easiest. -->
+Taken from `logs/audit.jsonl`, which holds the whole run: 68 entries, one per request, including the 12 replayed flood rows. The five breaks come first, then the closest a real writer came to being accused (FP05), a short real text that could not be submitted at all (FP08), the 57,640-character text (MF08), the first flood row (a 400 the limiter still counted) and a 429 from the replay. The four refusals are rejections: their scores and `content_id` are null because nothing was decided.
 
 ```json
-
+{"timestamp": "2026-11-05T02:56:29+00:00", "content_id": "4dd32993-d538-42cf-b60c-fe030c2b0c13", "creator_id": "attacker_EV02", "guess": "human", "model_score": 0.5943, "style_score": 0.1463, "combined_score": 0.2583, "label": "We think this was probably written by a person.", "status": "decided"}
+{"timestamp": "2026-11-05T02:56:29+00:00", "content_id": "6ff578da-143c-423b-a83e-a776c7c9e28d", "creator_id": "attacker_EV05", "guess": "human", "model_score": 0.3212, "style_score": 0.1785, "combined_score": 0.2142, "label": "We think this was probably written by a person.", "status": "decided"}
+{"timestamp": "2026-11-05T02:56:29+00:00", "content_id": "b9c39396-bba1-4a4f-8eac-4e81fd40e9bc", "creator_id": "attacker_EV06", "guess": "human", "model_score": 0.5727, "style_score": 0.1467, "combined_score": 0.2532, "label": "We think this was probably written by a person.", "status": "decided"}
+{"timestamp": "2026-11-05T02:56:30+00:00", "content_id": "a361b78a-5e77-40f4-bf96-d06bbb371a2b", "creator_id": "attacker_PI01", "guess": "human", "model_score": 0.4625, "style_score": 0.15, "combined_score": 0.2281, "label": "We think this was probably written by a person.", "status": "decided"}
+{"timestamp": "2026-11-05T02:56:30+00:00", "content_id": "4c72fca6-c7e3-4b9f-a1c6-1a4428029425", "creator_id": "attacker_PI02", "guess": "human", "model_score": 0.2044, "style_score": 0.1319, "combined_score": 0.15, "label": "We think this was probably written by a person.", "status": "decided"}
+{"timestamp": "2026-11-05T02:56:30+00:00", "content_id": "791c2edc-f832-47bc-9728-ad9a1841dc1b", "creator_id": "attacker_FP05", "guess": "unsure", "model_score": 0.8005, "style_score": 0.9539, "combined_score": 0.8388, "label": "We can't tell whether this was written by a person or by an AI tool. This is not a finding against you: our check often can't tell, and many people's own writing gets this result. If you'd like a person to read it, you can ask for a review.", "status": "decided"}
+{"timestamp": "2026-11-05T02:56:30+00:00", "content_id": null, "creator_id": "attacker_FP08", "guess": null, "model_score": null, "style_score": null, "combined_score": null, "label": null, "status": "rejected", "event": "rejected", "reason": "bad_input", "http_status": 400}
+{"timestamp": "2026-11-05T02:56:30+00:00", "content_id": null, "creator_id": "attacker_MF08", "guess": null, "model_score": null, "style_score": null, "combined_score": null, "label": null, "status": "rejected", "event": "rejected", "reason": "text_too_large", "http_status": 413}
+{"timestamp": "2026-11-05T02:56:30+00:00", "content_id": null, "creator_id": "attacker_flood", "guess": null, "model_score": null, "style_score": null, "combined_score": null, "label": null, "status": "rejected", "event": "rejected", "reason": "bad_input", "http_status": 400}
+{"timestamp": "2026-11-05T02:56:40+00:00", "content_id": null, "creator_id": "attacker_flood", "guess": null, "model_score": null, "style_score": null, "combined_score": null, "label": null, "status": "rejected", "event": "rejected", "reason": "rate_limited", "http_status": 429, "limit": "12 per 1 minute"}
 ```
 
-**The single worst outcome** — the one I'd least want to explain to a writer
-whose work got caught by it:
+**The single worst outcome** — the one I'd least want to explain to a writer whose work got caught by it:
 
-
+`FP05`, "technical documentation written by a person". It is seven plain instructional sentences ("To configure the service, edit the settings file in the installation directory. Set the host value to the address the service should bind to. …"). The service returned guess "unsure" with combined score 0.8388, from signal one 0.8005 and signal two 0.9539. Both signals read it as AI. The "ai" label starts at 0.85, so this writer was 0.0112 below being told "Our check thinks this may have been mostly written by an AI tool". They saw the "unsure" label ("not a finding against you") and that is the right outcome. It is the worst because it is luck, not design: the margin is a threshold I set from three texts that an AI imitated, and a person who writes instructions plainly, which is how instructions should be written, sits next to it.
 
 ---
 
@@ -432,8 +521,8 @@ that produced it:
        [x] Rate limiting on /submit, with your numbers justified
        [x] The pasted run of status codes showing 429
        [x] Audit log with all nine fields, recording rejections too
-       [ ] The attack set run IN FULL, every input with an outcome
-       [ ] Ten audit log entries pasted as text
+       [x] The attack set run IN FULL, every input with an outcome
+       [x] Ten audit log entries pasted as text
        [ ] Five criteria across three trials
        [ ] A diagnosis for every miss and every broken attack — stage AND mechanism
        [ ] One improvement, with Attack Run — After
