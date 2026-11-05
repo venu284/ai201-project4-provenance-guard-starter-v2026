@@ -1,0 +1,182 @@
+{
+ "ai_01": {
+  "style": 0.419,
+  "model": 0.7002,
+  "combined": 0.4893,
+  "guess": "unsure"
+ },
+ "ai_02": {
+  "style": 0.5537,
+  "model": 0.8386,
+  "combined": 0.6249,
+  "guess": "unsure"
+ },
+ "ai_03": {
+  "style": 0.7402,
+  "model": 0.7245,
+  "combined": 0.7284,
+  "guess": "unsure"
+ },
+ "ai_04": {
+  "style": 0.4921,
+  "model": 0.6472,
+  "combined": 0.5309,
+  "guess": "unsure"
+ },
+ "ai_05": {
+  "style": 0.7052,
+  "model": 0.8097,
+  "combined": 0.7313,
+  "guess": "unsure"
+ },
+ "ai_06": {
+  "style": 0.4285,
+  "model": 0.8211,
+  "combined": 0.5266,
+  "guess": "unsure"
+ },
+ "ai_07": {
+  "style": 0.4089,
+  "model": 0.8287,
+  "combined": 0.5138,
+  "guess": "unsure"
+ },
+ "ai_08": {
+  "style": 0.6384,
+  "model": 0.9101,
+  "combined": 0.7063,
+  "guess": "unsure"
+ },
+ "ai_edited_01": {
+  "style": 0.3538,
+  "model": 0.6446,
+  "combined": 0.4265,
+  "guess": "unsure"
+ },
+ "ai_edited_02": {
+  "style": 0.6737,
+  "model": 0.6044,
+  "combined": 0.6217,
+  "guess": "unsure"
+ },
+ "ai_edited_03": {
+  "style": 0.3959,
+  "model": 0.7996,
+  "combined": 0.4968,
+  "guess": "unsure"
+ },
+ "ai_edited_04": {
+  "style": 0.1957,
+  "model": 0.8193,
+  "combined": 0.3516,
+  "guess": "unsure"
+ },
+ "ai_plain_01": {
+  "style": 0.9605,
+  "model": 0.8868,
+  "combined": 0.9052,
+  "guess": "ai"
+ },
+ "ai_plain_02": {
+  "style": 0.7632,
+  "model": 0.7871,
+  "combined": 0.7692,
+  "guess": "unsure"
+ },
+ "ai_plain_03": {
+  "style": 0.8649,
+  "model": 0.8343,
+  "combined": 0.842,
+  "guess": "unsure"
+ },
+ "ai_plain_04": {
+  "style": 0.9579,
+  "model": 0.8223,
+  "combined": 0.8562,
+  "guess": "ai"
+ },
+ "human_01": {
+  "style": 0.0685,
+  "model": 0.4036,
+  "combined": 0.1523,
+  "guess": "human"
+ },
+ "human_02": {
+  "style": 0.1226,
+  "model": 0.4664,
+  "combined": 0.2086,
+  "guess": "human"
+ },
+ "human_03": {
+  "style": 0.1208,
+  "model": 0.482,
+  "combined": 0.2111,
+  "guess": "human"
+ },
+ "human_04": {
+  "style": 0.742,
+  "model": 0.9227,
+  "combined": 0.7872,
+  "guess": "unsure"
+ },
+ "human_05": {
+  "style": 0.7951,
+  "model": 0.8012,
+  "combined": 0.7966,
+  "guess": "unsure"
+ },
+ "human_06": {
+  "style": 0.763,
+  "model": 0.8615,
+  "combined": 0.7876,
+  "guess": "unsure"
+ },
+ "human_07": {
+  "style": 0.7459,
+  "model": 0.585,
+  "combined": 0.6252,
+  "guess": "unsure"
+ },
+ "human_08": {
+  "style": 0.6038,
+  "model": 0.3889,
+  "combined": 0.4426,
+  "guess": "unsure"
+ },
+ "seed_ai": {
+  "style": 0.6883,
+  "model": 0.8093,
+  "combined": 0.7186,
+  "guess": "unsure"
+ },
+ "seed_human": {
+  "style": 0.103,
+  "model": 0.3032,
+  "combined": 0.1531,
+  "guess": "human"
+ },
+ "seed_plain": {
+  "style": 0.765,
+  "model": 0.8188,
+  "combined": 0.7784,
+  "guess": "unsure"
+ },
+ "seed_edited_ai": {
+  "style": 0.6312,
+  "model": 0.6014,
+  "combined": 0.6089,
+  "guess": "unsure"
+ },
+ "seed_plain_bursty": {
+  "style": 0.3145,
+  "model": 0.7968,
+  "combined": 0.4351,
+  "guess": "unsure"
+ },
+ "seed_rare_ai": {
+  "style": 0.75,
+  "model": 0.1432,
+  "combined": 0.2949,
+  "guess": "human"
+ }
+}

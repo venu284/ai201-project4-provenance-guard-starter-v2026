@@ -1,0 +1,305 @@
+{
+ "description": "Calibration texts for the style signal and the combining rule. The human-kind texts are AI-written imitations, not real writers: treat results as a stress test, not a measurement. model_score is cached so the table runs without the model; calibrate.py --live recomputes it. Odd-numbered files (split=train) were used to re-fit the spread anchors; even-numbered (holdout) were held back.",
+ "texts": [
+  {
+   "file": "texts/ai_01.txt",
+   "group": "AI",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "train",
+   "sha256": "99eeab5b921198b078f72d15eb6d61fc1d11e386be730685dfdd5059261e8595",
+   "model_score": 0.7002
+  },
+  {
+   "file": "texts/ai_02.txt",
+   "group": "AI",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "holdout",
+   "sha256": "4c850761f3b16cc51e8d33b7c06668e1ae1282dc5b61014263259eca6ff3f311",
+   "model_score": 0.8386
+  },
+  {
+   "file": "texts/ai_03.txt",
+   "group": "AI",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "train",
+   "sha256": "ac8bdd632a51664db83a4e3e8452d026d73b5ab3d4f6539b5446acfd8c026dbd",
+   "model_score": 0.7245
+  },
+  {
+   "file": "texts/ai_04.txt",
+   "group": "AI",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "holdout",
+   "sha256": "8c4c639a387e1bb3c2cb7caa952ac3ca688848a6a1f7dc8ebaebe5616e32db33",
+   "model_score": 0.6472
+  },
+  {
+   "file": "texts/ai_05.txt",
+   "group": "AI",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "train",
+   "sha256": "b8adf0103c007d04bf6d726ea9fe2d9d64f701fef9f6fd098eb1bf5a18b59d05",
+   "model_score": 0.8097
+  },
+  {
+   "file": "texts/ai_06.txt",
+   "group": "AI",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "holdout",
+   "sha256": "3d4614e795d053973b0f334d6cb64b0f5b897263c50106ce6b138713ee4eac21",
+   "model_score": 0.8211
+  },
+  {
+   "file": "texts/ai_07.txt",
+   "group": "AI",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "train",
+   "sha256": "51d1c507723bf20cf830a43b3443f052e35965ec488a3aff90f8acf5d1543506",
+   "model_score": 0.8287
+  },
+  {
+   "file": "texts/ai_08.txt",
+   "group": "AI",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "holdout",
+   "sha256": "2484e1289a18993df65d0912f21a22c91f276fa300805dcef991f19f66325ffc",
+   "model_score": 0.9101
+  },
+  {
+   "file": "texts/ai_edited_01.txt",
+   "group": "AI-edited",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "train",
+   "sha256": "7b95116db36ec836ca27153fb61163456262c8c5d6eafe2dc7cfe58b3bef164a",
+   "model_score": 0.6446
+  },
+  {
+   "file": "texts/ai_edited_02.txt",
+   "group": "AI-edited",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "holdout",
+   "sha256": "37af1489399b50a6c4f7df4d42dbae5ee5165380bd084e6e1bf427aa11775811",
+   "model_score": 0.6044
+  },
+  {
+   "file": "texts/ai_edited_03.txt",
+   "group": "AI-edited",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "train",
+   "sha256": "0eeea3e1f45708cc72b4b667d2598cca4be6756e4290fc41f4e5188d97e1428d",
+   "model_score": 0.7996
+  },
+  {
+   "file": "texts/ai_edited_04.txt",
+   "group": "AI-edited",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "holdout",
+   "sha256": "7bebb8ee5a6d9918d2bd7991f44e0365f0f15f1cddd4638d2dd96682829cfea1",
+   "model_score": 0.8193
+  },
+  {
+   "file": "texts/ai_plain_01.txt",
+   "group": "AI-plain",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "train",
+   "sha256": "fa1939a74064b23da07fa9558d291067bba1cce9b6dfef120d3dede22f438478",
+   "model_score": 0.8868
+  },
+  {
+   "file": "texts/ai_plain_02.txt",
+   "group": "AI-plain",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "holdout",
+   "sha256": "591ec10f76f5f3b713c6cd8402c840a3951afd7b66f95c85568a718e2797ccf2",
+   "model_score": 0.7871
+  },
+  {
+   "file": "texts/ai_plain_03.txt",
+   "group": "AI-plain",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "train",
+   "sha256": "4b04fa1123950c52b33177e2f99b5ee01503951da5c5a161704a91d9cdcef650",
+   "model_score": 0.8343
+  },
+  {
+   "file": "texts/ai_plain_04.txt",
+   "group": "AI-plain",
+   "kind": "ai",
+   "origin": "AI-written",
+   "note": "",
+   "split": "holdout",
+   "sha256": "4f3a890495a07f21329dcf0968f67efdb2f54e0875eea93508a2479b7bfe5e33",
+   "model_score": 0.8223
+  },
+  {
+   "file": "texts/human_01.txt",
+   "group": "human-messy",
+   "kind": "human",
+   "origin": "AI-written imitation of a human",
+   "note": "messy casual (imitation by AI)",
+   "split": "train",
+   "sha256": "02733bc18a368a14ee2d5229827878cddb7d679de7a6bde1189fe1486900c611",
+   "model_score": 0.4036
+  },
+  {
+   "file": "texts/human_02.txt",
+   "group": "human-messy",
+   "kind": "human",
+   "origin": "AI-written imitation of a human",
+   "note": "messy casual (imitation by AI)",
+   "split": "holdout",
+   "sha256": "b3182fb9245c219953cc13d8accbd7c9c6fa52dc60614650faf3b222879e296f",
+   "model_score": 0.4664
+  },
+  {
+   "file": "texts/human_03.txt",
+   "group": "human-messy",
+   "kind": "human",
+   "origin": "AI-written imitation of a human",
+   "note": "messy casual (imitation by AI)",
+   "split": "train",
+   "sha256": "f89171ef36a6caebc88b6ef3bf4e78a35f546754c13c72b9c247c8e0d99e2277",
+   "model_score": 0.482
+  },
+  {
+   "file": "texts/human_04.txt",
+   "group": "human-plain",
+   "kind": "human",
+   "origin": "AI-written imitation of a human",
+   "note": "plain L2/student (imitation by AI)",
+   "split": "holdout",
+   "sha256": "90648a0caac61a5076d96afe4811635e13d3197c40e100c5b40a395efed3d976",
+   "model_score": 0.9227
+  },
+  {
+   "file": "texts/human_05.txt",
+   "group": "human-plain",
+   "kind": "human",
+   "origin": "AI-written imitation of a human",
+   "note": "plain L2/student (imitation by AI)",
+   "split": "train",
+   "sha256": "580b6a0e957e499e134c3af228bbfe2e2da83cb7137a412ac6f75fbe60ebe758",
+   "model_score": 0.8012
+  },
+  {
+   "file": "texts/human_06.txt",
+   "group": "human-plain",
+   "kind": "human",
+   "origin": "AI-written imitation of a human",
+   "note": "plain L2/student (imitation by AI)",
+   "split": "holdout",
+   "sha256": "81259dd6888d8d2714dc9f914bb40cafa7768e266edf9b0101a1b7ca821097a8",
+   "model_score": 0.8615
+  },
+  {
+   "file": "texts/human_07.txt",
+   "group": "human-formal",
+   "kind": "human",
+   "origin": "AI-written imitation of a human",
+   "note": "formal legal (imitation by AI)",
+   "split": "train",
+   "sha256": "b710dd8659aa588cc5784e8b7d2db0db15f17199e177ea0c2ebbe1b5a73dcda0",
+   "model_score": 0.585
+  },
+  {
+   "file": "texts/human_08.txt",
+   "group": "human-formal",
+   "kind": "human",
+   "origin": "AI-written imitation of a human",
+   "note": "formal academic (imitation by AI)",
+   "split": "holdout",
+   "sha256": "076d72b43fc57101fbc9de733cb8a1caabdbb79acf2210c27cb8fa0716a81509",
+   "model_score": 0.3889
+  },
+  {
+   "file": "texts/seed_ai.txt",
+   "group": "seed",
+   "kind": "ai",
+   "origin": "written by the student/agent for first calibration",
+   "note": "Clearly AI",
+   "split": "seed",
+   "sha256": "e2b574681cf569e960ef26508e456ed4b3e6a51892b985c0199d0cc85bf0d3e9",
+   "model_score": 0.8093
+  },
+  {
+   "file": "texts/seed_human.txt",
+   "group": "seed",
+   "kind": "human",
+   "origin": "written by the student/agent for first calibration",
+   "note": "Clearly human (narrative)",
+   "split": "seed",
+   "sha256": "70261b8486639576e56f6ad84ecf6df57eb65697140192452ccf78841377ff88",
+   "model_score": 0.3032
+  },
+  {
+   "file": "texts/seed_plain.txt",
+   "group": "seed",
+   "kind": "human",
+   "origin": "written by the student/agent for first calibration",
+   "note": "Plain human (short, even sentences)",
+   "split": "seed",
+   "sha256": "9c4f94a301e2fdcdd74f5e61a75e76c9bf27d352bd6d985bf6a3cc5d2f016245",
+   "model_score": 0.8188
+  },
+  {
+   "file": "texts/seed_edited_ai.txt",
+   "group": "seed",
+   "kind": "ai",
+   "origin": "written by the student/agent for first calibration",
+   "note": "Lightly edited AI",
+   "split": "seed",
+   "sha256": "64424a10adcfb71f4172260b65ce3a7a1a77509d1158ee82354b84ca9809c9bc",
+   "model_score": 0.6014
+  },
+  {
+   "file": "texts/seed_plain_bursty.txt",
+   "group": "seed",
+   "kind": "human",
+   "origin": "written by the student/agent for first calibration",
+   "note": "Plain human, uneven sentence lengths",
+   "split": "seed",
+   "sha256": "ed93d5a45180c021749c42ea0dfad1416d397a84beca03c67a1c6a70e8337074",
+   "model_score": 0.7968
+  },
+  {
+   "file": "texts/seed_rare_ai.txt",
+   "group": "seed",
+   "kind": "ai",
+   "origin": "written by the student/agent for first calibration",
+   "note": "AI padded with rare words",
+   "split": "seed",
+   "sha256": "cb02180d0aff0ea2b3884c0fff0234f3799af8b4f01c884bd7a04a3f460e6e37",
+   "model_score": 0.1432
+  }
+ ]
+}

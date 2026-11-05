@@ -1,0 +1,7 @@
+A hash table is a data structure that stores key-value pairs and allows for very fast lookups. Instead of searching through every element, it uses a hash function to convert each key into an index in an underlying array. This means that, on average, inserting, retrieving, and deleting items can all be performed in constant time.
+
+The central challenge in designing a hash table is handling collisions, which occur when two different keys produce the same index. There are two common strategies for resolving them. In separate chaining, each array slot holds a linked list of all entries that hash to that position. In open addressing, the algorithm probes for the next available slot within the array itself.
+
+The performance of a hash table depends heavily on its load factor, which is the ratio of stored entries to the total number of slots. As the load factor increases, collisions become more frequent and operations slow down. To maintain efficiency, most implementations automatically resize the array and rehash all existing keys once the load factor exceeds a certain threshold, typically around 0.75.
+
+Understanding these trade-offs is essential for choosing the right data structure for a given application.

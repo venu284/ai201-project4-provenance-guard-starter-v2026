@@ -110,6 +110,8 @@ What the 24 texts show that I did not want:
 
 The human texts in that set were written by an AI imitating human writing, and each group has only two to four texts, so treat these as a stress test, not a measurement.
 
+**Reproducing these numbers.** The 24 texts and the six calibration paragraphs are committed in `samples/calibration/`, with their groups and the train/holdout split in `manifest.json`. `python calibrate.py` prints the per-text and per-group tables from the current code and `config.py` (add `--live` to re-score signal one with the model, `--split holdout` for the held-out half). `python calibrate.py --check` fails if any style score, combined score or label has moved from `results/calibration_baseline.json`, and `python -m pytest` runs the same check, so a change to `stylometry.py` cannot silently shift every score.
+
 **Where it lives:** `scoring.py::combine_signals`
 
 <!-- ⚠️ The grader checks your code against that line. If your rule lives

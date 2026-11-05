@@ -1,0 +1,14 @@
+Subject: Update on the Q3 Product Roadmap
+
+Hi team,
+
+I hope this message finds you well. I wanted to share a brief update on where we stand with the Q3 product roadmap and outline a few next steps.
+
+First, the design phase for the new dashboard has been completed, and the engineering team has begun implementation. We are currently on track to deliver the first milestone by the end of the month. Second, the customer research findings are now available in the shared drive. I would encourage everyone to review the summary, as it highlights several opportunities that may influence our priorities.
+
+Looking ahead, we will need to finalize the resource plan by Friday. If you have any concerns about capacity or timelines, please let me know as soon as possible so that we can address them together. I will also be scheduling a short sync early next week to discuss open questions.
+
+Thank you all for your continued hard work and dedication. Please do not hesitate to reach out if you need any additional information or support.
+
+Best regards,
+Jordan
