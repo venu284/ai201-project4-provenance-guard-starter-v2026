@@ -273,25 +273,45 @@ $ curl "http://127.0.0.1:5000/log?limit=2"
 
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:** 12 per minute, 30 per day
 
 **Why those numbers and not others:**
-<!-- Think about two people: a real writer submitting their own work a few
-     times an hour, and a script sending a thousand variations to map your
-     thresholds. Your numbers have to be liveable for the first and hostile to
-     the second. -->
 
-**What a caller counts as:** <!-- per address, or per creator_id? They fail
-differently — one script can look like a thousand callers, and one household
-can look like one. -->
+Two people use `/submit`. A real writer sends their own work a few times in a day, and when they revise a piece they might send two or three versions inside a minute. A script sends a thousand variations of one text to find where the thresholds sit.
+
+- **12 a minute** never gets in a writer's way, and it stops a burst: a flood of 15 gets twelve `200`s and three `429`s. On its own it would be a weak limit, because a script held to 12 a minute could still send over 17,000 a day.
+- **30 a day** is the limit that does the real work. A long day of revisions fits inside it, and a script gets 30 probes per `creator_id`, which is too few to find where 0.30 and 0.85 sit. I did not go lower because a writer who hits a limit is the person the label wording is trying to protect. I did not go higher because every extra probe is one more point on the map.
+- The two limits are different checks. At 12 a minute it takes three minutes of steady use to reach 30: two full minutes make 24, and the 31st submission is refused with `30 per 1 day`. The `429` says which limit it hit, so the two are easy to tell apart.
+
+The numbers are `RATE_LIMIT_PER_MINUTE` and `RATE_LIMIT_PER_DAY` in `config.py`, with the reasoning beside them. The limiter is on by default; `AI201_RATE_LIMITS=0` switches it off.
+
+**What a caller counts as:** the `creator_id` in the request body. When a request has no usable `creator_id` (missing, not a string, or not a JSON object) it counts against the caller's address instead, so all of those requests from one machine share one allowance.
+
+This was a choice, and it costs something. A script that makes up a new `creator_id` for every request is never limited by the per-creator rule, so the limit stops one noisy creator and does not stop a determined caller who rotates names. A per-address limit would stop that, but it would count one household or one office as a single caller, and it would limit the whole attack set, which sends every attack under its own `creator_id`, from one address. The address fallback only covers requests that give no name at all. The counts live in memory, so a restart forgets them. Requests that are refused with a `400` still count, so a flood of bad input is limited too.
 
 **The run of status codes when I pushed past it:**
 
-<!-- python run_attacks.py --flood 15 -->
+`python run_attacks.py --flood 15` (15 submissions from one `creator_id`, written to `results/flood_2026-11-04_2132.md`):
 
 ```
+200 200 200 200 200 200 200 200 200 200 200 200 429 429 429
+```
+
+The same service, one `creator_id`, three bursts of 12 submissions with a minute between them, to reach the daily limit (the third burst ran for about a second, so every request counted):
 
 ```
+burst 1 (requests 1-12):  200 200 200 200 200 200 200 200 200 200 200 200
+burst 2 (requests 13-24): 200 200 200 200 200 200 200 200 200 200 200 200
+burst 3 (requests 25-36): 200 200 200 200 200 200 429 429 429 429 429 429   limit: 30 per 1 day
+```
+
+Request 31 is the first one refused. The log records every refusal, with the limit that caused it (one of the `429` entries from that run):
+
+```json
+{"timestamp": "2026-11-05T02:34:19+00:00", "content_id": null, "creator_id": "daycap_tester", "guess": null, "model_score": null, "style_score": null, "combined_score": null, "label": null, "status": "rejected", "event": "rejected", "reason": "rate_limited", "http_status": 429, "limit": "30 per 1 day"}
+```
+
+**The audit log.** Every entry in `logs/audit.jsonl` starts with the same nine fields in the same order: `timestamp`, `content_id`, `creator_id`, `guess`, `model_score`, `style_score`, `combined_score`, `label`, `status`. A decision fills all nine. A rejection leaves `content_id`, `guess`, the scores and `label` null, because nothing was decided, and adds `event`, `reason` and `http_status`. An appeal copies `guess`, the scores and `label` from the decision it is about, so the line says what was decided and that it is now `under_review`, without going to find the original. The Sample Run above was recorded in unit 7, before the log gained these fields, so its appeal line has the old, shorter shape.
 
 ---
 
@@ -409,9 +429,9 @@ that produced it:
 
      SUBMISSION CHECKLIST — unit 8
 
-       [ ] Rate limiting on /submit, with your numbers justified
-       [ ] The pasted run of status codes showing 429
-       [ ] Audit log with all nine fields, recording rejections too
+       [x] Rate limiting on /submit, with your numbers justified
+       [x] The pasted run of status codes showing 429
+       [x] Audit log with all nine fields, recording rejections too
        [ ] The attack set run IN FULL, every input with an outcome
        [ ] Ten audit log entries pasted as text
        [ ] Five criteria across three trials

@@ -76,3 +76,13 @@ def test_criteria_never_quote_a_band_that_differs_from_config():
 def test_criteria_input_limits_match_the_route():
     assert f"at least {app.MIN_WORDS} words" in CRITERIA
     assert f"at most {app.MAX_CHARS:,} characters" in CRITERIA
+
+
+def test_readme_rate_limit_numbers_match_config():
+    assert (
+        f"**My limits:** {config.RATE_LIMIT_PER_MINUTE} per minute, "
+        f"{config.RATE_LIMIT_PER_DAY} per day"
+    ) in README
+    assert f"**{config.RATE_LIMIT_PER_MINUTE} a minute**" in README
+    assert f"**{config.RATE_LIMIT_PER_DAY} a day**" in README
+    assert f"`{config.RATE_LIMIT_PER_DAY} per 1 day`" in README
