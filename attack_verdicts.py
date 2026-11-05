@@ -44,10 +44,24 @@ every family):
                    HELD on a 4xx or a 429; BROKE on any 200.
   flood_same_creator
                    Twelve rows from one creator against a limit of 12 a minute.
-                   Row n is HELD if the limiter behaved as configured: 200 up
-                   to the limit, 429 beyond it. BROKE if a row past the limit
-                   got 200 or a row within it got 429. `--replay` marks the
-                   rows sent again in the same minute, where all should 429.
+                   Row n is HELD if the limiter behaved as configured: not 429
+                   up to the limit, 429 beyond it. BROKE if a row past the
+                   limit did not get 429, or a row within it got 429. `--replay`
+                   marks the rows sent again in the same minute, where all
+                   should 429.
+
+                   AMENDED after the run. As first written, a row within the
+                   limit was HELD only on 200. The flood body turned out to be a
+                   9-word text, under the route's 20-word minimum, so every row
+                   got 400 and the rule marked all 12 BROKE. A 400 within the
+                   limit is the route refusing a short text, not a limiter
+                   failure, and the limiter still counted those requests (the
+                   replay got 429 on all 12). The amendment came from reading
+                   the input, not from a score. The first-pass verdicts are kept
+                   in results/attack_verdicts_before_as_frozen.md.
+
+Judgements: a row the rules leave as JUDGE is decided by a person, in a file
+passed with --judged ({"PI01": ["BROKE", "why"]}). It can only override a JUDGE.
 
 Log checks (reported, not per attack): every line parses, starts with the nine
 fields in order, has no unknown field, the log holds exactly one entry per
@@ -154,9 +168,11 @@ def judge(row: dict, entries: list[dict] | None = None, per_minute: int | None =
 def _judge_flood(row: dict, status: int, per_minute: int, already_sent: int) -> tuple[str, str]:
     n = int(row["id"].rsplit("_", 1)[-1]) + already_sent
     if n <= per_minute:
+        if status == 429:
+            return "BROKE", f"request {n} is within the limit of {per_minute} but got 429"
         if status == 200:
             return "HELD", f"request {n} of {per_minute} allowed: 200"
-        return "BROKE", f"request {n} is within the limit but got {status}"
+        return "HELD", f"request {n} of {per_minute}: {status}, refused by the route and still counted"
     if status == 429:
         return "HELD", f"request {n} is past the limit of {per_minute}: 429"
     return "BROKE", f"request {n} is past the limit of {per_minute} but got {status}"
@@ -234,6 +250,29 @@ def decision_for(row: dict, entries: list[dict]) -> dict | None:
 
 # ── the report ───────────────────────────────────────────────────────────────
 
+def apply_judgements(results: list[dict], judged: dict) -> list[str]:
+    """
+    Settle JUDGE rows from a person's decisions. Returns problems.
+
+    A decision may only settle a row the rules left as JUDGE, and every JUDGE
+    row must have one by the time the final table is written.
+    """
+    problems = []
+    by_id = {r["id"]: r for r in results}
+    for id, (verdict, why) in judged.items():
+        r = by_id.get(id)
+        if r is None or r["verdict"] != "JUDGE":
+            problems.append(f"{id}: a judgement was given but the rules did not leave it to judge")
+        elif verdict not in ("HELD", "BROKE"):
+            problems.append(f"{id}: judgement must be HELD or BROKE, not {verdict}")
+        else:
+            r["verdict"], r["note"] = verdict, f"judged: {why}"
+    for r in results:
+        if r["verdict"] == "JUDGE" and r["id"] not in judged:
+            problems.append(f"{r['id']}: still to judge")
+    return problems
+
+
 def build(rows: list[dict], entries: list[dict], already_sent_for: dict[str, int] | None = None):
     """Judge every row. Returns a list of result dicts."""
     out = []
@@ -257,27 +296,39 @@ def fmt(v) -> str:
     return f"{v:.3f}" if isinstance(v, float) else ("—" if v is None else str(v))
 
 
-def write(results: list[dict], problems: list[str], label: str, source: Path) -> Path:
+def write(results: list[dict], problems: list[str], label: str, source: Path,
+          first_pass: str = "") -> Path:
     path = config.RESULTS_DIR / f"attack_verdicts_{label}.md"
-    held = sum(r["verdict"] == "HELD" for r in results)
-    broke = sum(r["verdict"] == "BROKE" for r in results)
-    judge_n = sum(r["verdict"] == "JUDGE" for r in results)
+    main_rows = [r for r in results if not r.get("replay")]
+    replay_rows = [r for r in results if r.get("replay")]
+    count = lambda rows, v: sum(r["verdict"] == v for r in rows)
     lines = [
         f"# Attack verdicts — {label}", "",
-        f"- Report read: `{source.name}`; rules: `attack_verdicts.py::judge` (frozen before the run)",
-        f"- {len(results)} attacks: **{held} HELD**, **{broke} BROKE**, **{judge_n} left to judge**", "",
-        "| ID | Family | Status | Guess | Model | Style | Combined | Verdict | Why |",
-        "|---|---|---|---|---|---|---|---|---|",
+        f"- Report read: `{source.name}`; rules: `attack_verdicts.py::judge` (written before the run)",
+        f"- {len(main_rows)} attacks: **{count(main_rows, 'HELD')} HELD**, **{count(main_rows, 'BROKE')} BROKE**, "
+        f"**{count(main_rows, 'JUDGE')} left to judge**",
     ]
-    for r in results:
-        lines.append(f"| {r['id']} | {r['family']} | {r['status'] or '—'} | {r['guess'] or '—'} | "
-                     f"{fmt(r['model'])} | {fmt(r['style'])} | {fmt(r['combined'])} | "
-                     f"{r['verdict']} | {r['note'].replace('|', '/')} |")
+    if first_pass:
+        lines.append(f"- First marked by the unamended rules: {first_pass}, counting the 12 flood "
+                     f"replay rows (`attack_verdicts_{label}_as_frozen.md`)")
+    lines += ["", "| ID | Family | Status | Guess | Model | Style | Combined | Verdict | Why |",
+              "|---|---|---|---|---|---|---|---|---|"]
+
+    def table_row(r):
+        return (f"| {r['id']} | {r['family']} | {r['status'] or '—'} | {r['guess'] or '—'} | "
+                f"{fmt(r['model'])} | {fmt(r['style'])} | {fmt(r['combined'])} | "
+                f"{r['verdict']} | {r['note'].replace('|', '/')} |")
+
+    lines += [table_row(r) for r in main_rows]
     lines += ["", "## By family", "", "| Family | Attacks | HELD | BROKE | JUDGE |", "|---|---|---|---|---|"]
-    for family in dict.fromkeys(r["family"] for r in results):
-        items = [r for r in results if r["family"] == family]
+    for family in dict.fromkeys(r["family"] for r in main_rows):
+        items = [r for r in main_rows if r["family"] == family]
         lines.append(f"| {family} | {len(items)} | " + " | ".join(
-            str(sum(r["verdict"] == v for r in items)) for v in ("HELD", "BROKE", "JUDGE")) + " |")
+            str(count(items, v)) for v in ("HELD", "BROKE", "JUDGE")) + " |")
+    if replay_rows:
+        lines += ["", "## Flood family sent again in the same minute (supplement, not counted above)", "",
+                  "| ID | Status | Verdict | Why |", "|---|---|---|---|"]
+        lines += [f"| {r['id']} | {r['status'] or '—'} | {r['verdict']} | {r['note']} |" for r in replay_rows]
     lines += ["", "## Audit log checks", ""]
     lines += [f"- {p}" for p in problems] or ["- complete and well formed: one entry per request, nine fields in order, no unknown fields"]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -288,32 +339,39 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--label", required=True, help="the --label the attack run used, e.g. before")
     parser.add_argument("--replay", help="label of a flood-family replay sent in the same minute")
+    parser.add_argument("--judged", help="JSON file of a person's decisions for rows left as JUDGE")
     args = parser.parse_args()
 
     source = latest_report(args.label)
     rows = parse_report(source.read_text(encoding="utf-8"))
-    already = {}
+    already, replay_rows = {}, []
     if args.replay:
         replay_rows = parse_report(latest_report(args.replay).read_text(encoding="utf-8"))
-        per_minute = config.RATE_LIMIT_PER_MINUTE
         sent = sum(1 for r in rows if r["family"] == "flood_same_creator")
         already = {r["id"]: sent for r in replay_rows}
-        rows_for_log = rows + replay_rows
-    else:
-        replay_rows, rows_for_log = [], rows
 
     entries, complaints = read_log_lines()
-    problems = check_log(entries, rows_for_log, complaints)
+    problems = check_log(entries, rows + replay_rows, complaints)
     results = build(rows, entries) + build(replay_rows, entries, already)
-    if replay_rows:
-        for r in results[len(rows):]:
-            r["id"] += " (replay)"
-    path = write(results, problems, args.label, source)
+    for r in results[len(rows):]:
+        r["replay"] = True
+        r["id"] += " (replay)"
 
+    if args.judged:
+        problems += apply_judgements(results, json.loads(Path(args.judged).read_text(encoding="utf-8")))
+
+    first_pass = ""
+    frozen = config.RESULTS_DIR / f"attack_verdicts_{args.label}_as_frozen.md"
+    if frozen.exists():
+        m = re.search(r"^- (\d+ attacks: .*)$", frozen.read_text(encoding="utf-8"), re.M)
+        first_pass = m.group(1).replace("**", "") if m else ""
+
+    path = write(results, problems, args.label, source, first_pass)
+    main_rows = [r for r in results if not r.get("replay")]
     for v in ("HELD", "BROKE", "JUDGE"):
-        print(f"{v:6} {sum(r['verdict'] == v for r in results)}")
+        print(f"{v:6} {sum(r['verdict'] == v for r in main_rows)}   (of {len(main_rows)} attacks)")
     for p in problems:
-        print("LOG:", p)
+        print("CHECK:", p)
     print(f"wrote {path.relative_to(config.ROOT)}")
     return 0
 

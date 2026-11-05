@@ -115,7 +115,8 @@ def test_an_accepted_malformed_request_is_broke():
 
 @pytest.mark.parametrize("n, status, verdict", [
     (1, 200, "HELD"), (12, 200, "HELD"), (12, 429, "BROKE"),
-    (13, 429, "HELD"), (13, 200, "BROKE"),
+    (1, 400, "HELD"), (12, 400, "HELD"),    # amended: a refused short body is not a limiter failure
+    (13, 429, "HELD"), (13, 200, "BROKE"), (13, 400, "BROKE"),
 ])
 def test_flood_rows_are_held_when_the_limiter_acts_as_configured(n, status, verdict):
     assert av.judge(row(f"FL01_{n:02d}", "flood_same_creator", status=status), per_minute=12)[0] == verdict
@@ -199,3 +200,30 @@ def test_log_check_catches_a_missing_entry_a_bad_order_and_unknown_fields():
 
 def test_log_check_reports_lines_that_are_not_json():
     assert av.check_log([], [], ["log line 4 is not JSON"]) == ["log line 4 is not JSON"]
+
+
+# ── judgements ───────────────────────────────────────────────────────────────
+
+def result(id, verdict):
+    return {"id": id, "verdict": verdict, "note": ""}
+
+
+def test_a_judgement_settles_a_judge_row():
+    results = [result("PI01", "JUDGE")]
+    assert av.apply_judgements(results, {"PI01": ["BROKE", "AI text, got human"]}) == []
+    assert results[0]["verdict"] == "BROKE" and "AI text" in results[0]["note"]
+
+
+def test_a_judgement_cannot_overrule_a_rule():
+    results = [result("EV02", "BROKE")]
+    problems = av.apply_judgements(results, {"EV02": ["HELD", "no"]})
+    assert problems and results[0]["verdict"] == "BROKE"
+
+
+def test_an_unjudged_row_is_reported():
+    problems = av.apply_judgements([result("PI02", "JUDGE")], {})
+    assert problems == ["PI02: still to judge"]
+
+
+def test_a_judgement_must_be_held_or_broke():
+    assert av.apply_judgements([result("PI01", "JUDGE")], {"PI01": ["MAYBE", "x"]})
