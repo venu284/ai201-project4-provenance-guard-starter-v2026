@@ -3,7 +3,7 @@ Settings for Provenance Guard.
 
 Everything you're likely to change lives here, at the top, on purpose.
 
-You'll edit the thresholds in Milestone 5 and the rate limits in unit 8.
+You'll edit the thresholds in Milestone 5; the rate limits were set in unit 8.
 """
 
 import os
@@ -94,16 +94,29 @@ AI_THRESHOLD = 0.85
 
 
 # ─── Rate limiting (UNIT 8) ──────────────────────────────────────────────────
-# Off in unit 7. You turn it on and choose the numbers in unit 8, Milestone 1.
+# On by default now. Set AI201_RATE_LIMITS=0 to switch it off (the test suite
+# does, because most tests send more than 12 requests from one creator_id).
 #
-# Think about two people: a real writer submitting their own work a few times
-# an hour, and a script sending a thousand variations to map your thresholds.
-# Your README has to say why your numbers and not others.
+# Two people to think about: a real writer submitting their own work, and a
+# script sending a thousand variations to map the thresholds above.
+#
+#   12 a minute  A writer revising a piece sends two or three in a minute at
+#                most, so this never blocks them. It does stop a burst: a flood
+#                of 15 gets twelve 200s and three 429s.
+#   30 a day     This is the cap that does the real work. At 12 a minute a
+#                script could send over 17,000 a day; 30 leaves a writer room
+#                for a long day of revisions and gives a script 30 probes per
+#                creator_id, too few to find where the thresholds sit. It takes
+#                three minutes of steady use to reach it: two full minutes make
+#                24, and the 31st submission is refused with "30 per 1 day".
+#
+# Both count per creator_id (falling back to the caller's address when a request
+# has no usable creator_id). The README says what that does and does not stop.
 
-RATE_LIMITING_ENABLED = os.getenv("AI201_RATE_LIMITS", "0") == "1"
+RATE_LIMITING_ENABLED = os.getenv("AI201_RATE_LIMITS", "1") == "1"
 
-RATE_LIMIT_PER_MINUTE = 10
-RATE_LIMIT_PER_DAY = 200
+RATE_LIMIT_PER_MINUTE = 12
+RATE_LIMIT_PER_DAY = 30
 
 # Flask-Limiter warns loudly without this. In-memory is right for one laptop
 # and wrong for anything real — a restart forgets every count, and two copies

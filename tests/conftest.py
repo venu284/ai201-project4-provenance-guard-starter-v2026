@@ -7,10 +7,16 @@ replaced by a stub unless a test asks for the real one: tests need to run in
 seconds and give the same answer every time.
 """
 
+import os
 import sys
 from pathlib import Path
 
 import pytest
+
+# The shipped config turns rate limiting on. Most tests send far more than 12
+# requests from one creator_id, so switch it off for them; test_rate_limit.py
+# reloads app.py with it on. This must happen before config is imported.
+os.environ["AI201_RATE_LIMITS"] = "0"
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
