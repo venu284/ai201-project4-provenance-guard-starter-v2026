@@ -24,3 +24,6 @@ Thumbs.db
 # Local agent context — never commit
 CONTEXT.md
 DESIGN.md
+
+# Instructor demo request bodies, for reference only
+samples_refer/
