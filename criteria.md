@@ -69,7 +69,9 @@ The mean `combined_score` of 5 texts I am confident are AI-generated is at least
 
 **Why this target:**
 
-0.30 is the width of the unsure band (0.35 to 0.65). For the average clearly-human text to land below 0.35 and the average clearly-AI text above 0.65, the two averages have to be at least 0.30 apart. So a gap under 0.30 means the labels cannot both be confident. A gap of 0.30 or more is necessary for that, though not enough on its own.
+0.30 is the smallest gap I would call "far apart". A gap under 0.30 means the two groups overlap so much that no pair of thresholds can separate them. The gap is a floor, not a guarantee: the labels themselves come from `HUMAN_THRESHOLD` and `AI_THRESHOLD` in `config.py`, and criterion 3 is the one that checks all three labels can be reached.
+
+> **Correction, unit 8:** this paragraph first said 0.30 was "the width of the unsure band (0.35 to 0.65)". Those band numbers were a unit 7 draft and never matched the shipped thresholds. The target of 0.30 is unchanged. Only the reasoning under it was wrong. The thresholds are now cited from `config.py` instead of copied here, and `tests/test_docs_match_config.py` fails if a document quotes a threshold that differs from `config.py`.
 
 ---
 
