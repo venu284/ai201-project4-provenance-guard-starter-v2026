@@ -56,3 +56,18 @@ Ordinary AI texts average model 0.785 and style 0.548. With the weight of 0.75 o
 | own_08 (plain) | 0.809 | 0.041 |
 | own_09 (plain) | 0.708 | 0.142 |
 | own_10 (plain) | 0.667 | 0.183 |
+
+## 5. After the Milestone 5 change (sentences under 3 words no longer count in the spread)
+
+Signal-one scores are the ones the service returned before; only signal two changes. Sentence lengths are the ones that still count.
+
+| Text | Counted sentence lengths | Spread raw | Spread scaled | Style (before > after) | Model | Combined (before > after) | Label (before > after) |
+|---|---|---|---|---|---|---|---|
+| EV02 | 11, 15, 10, 13, 10, 12, 14 | 0.16 | 1.00 | 0.146 > 0.746 | 0.594 | 0.258 > 0.632 | human > unsure |
+| EV05 | 21, 10, 4, 9, 16, 21 | 0.51 | 0.24 | 0.178 > 0.325 | 0.321 | 0.214 > 0.322 | human > unsure |
+| EV06 | 51, 11, 15, 10, 4 | 1.03 | 0.00 | 0.147 > 0.147 | 0.573 | 0.253 > 0.253 | human > human |
+| PI01 | 4, 7, 7, 11, 15 | 0.48 | 0.33 | 0.150 > 0.347 | 0.463 | 0.228 > 0.376 | human > unsure |
+| PI02 | 7, 5, 6, 11, 15 | 0.47 | 0.37 | 0.132 > 0.353 | 0.204 | 0.150 > 0.241 | human > human |
+| own_08 (plain) | 9, 7, 5, 4, 6, 6, 8, 9, 7, 4, 6, 7, 6, 9, 8, 7, 6, 6, 8 | 0.23 | 1.00 | 0.883 > 0.883 | 0.784 | 0.809 > 0.809 | unsure > unsure |
+| own_09 (plain) | 8, 6, 5, 8, 8, 7, 11, 6, 5, 8, 8, 4, 4, 9, 7, 4, 5, 7, 7 | 0.28 | 0.91 | 0.682 > 0.760 | 0.786 | 0.708 > 0.767 | unsure > unsure |
+| own_10 (plain) | 9, 7, 6, 8, 5, 6, 7, 12, 6, 4, 6, 10, 4, 6, 7, 8, 8, 7 | 0.29 | 0.90 | 0.622 > 0.840 | 0.802 | 0.667 > 0.811 | unsure > unsure |

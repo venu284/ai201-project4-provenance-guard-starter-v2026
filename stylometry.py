@@ -60,6 +60,7 @@ TTR_WINDOW = 50  # words per window; see type_token_ratio
 # in that set sat at spread 0.22-0.51 and messy human text at 0.66-0.89, so the
 # human end is 0.60. The type-token and punctuation anchors are still rough
 # first guesses from six paragraphs and have not been re-fit.
+# The spread itself ignores sentences under SPREAD_MIN_SENTENCE_WORDS (below).
 SPREAD_HUMAN, SPREAD_AI = 0.60, 0.25
 TTR_HUMAN, TTR_AI = 0.90, 0.70
 PUNCT_HUMAN, PUNCT_AI = 0.15, 0.03
@@ -71,21 +72,36 @@ WEIGHT_SPREAD, WEIGHT_TTR, WEIGHT_PUNCT = 0.60, 0.25, 0.15
 
 NEUTRAL = 0.5  # what a measure says when it has nothing to measure
 
+# A sentence shorter than this many words is a fragment ("Really.", "True.", a
+# cut-off "Th"), not a sentence length, and is left out of the spread. Added in
+# unit 8 (Milestone 5): the attack run showed that adding one-word sentences to
+# AI text, or one very long sentence, pushed the spread past the human anchor
+# and zeroed the biggest part of the style score. 1 reproduces the old measure
+# (every sentence counts).
+SPREAD_MIN_SENTENCE_WORDS = 3
 
-def sentence_length_spread(text: str) -> float:
+
+def spread_lengths(text: str, min_words: int = SPREAD_MIN_SENTENCE_WORDS) -> list[int]:
+    """The sentence lengths, in words, that the spread is measured over."""
+    lengths = [len(words(s)) for s in sentences(text)]
+    return [n for n in lengths if n >= max(min_words, 1)]
+
+
+def sentence_length_spread(text: str, min_words: int = SPREAD_MIN_SENTENCE_WORDS) -> float:
     """
     How much sentence length varies. Raw scale: 0 and up. Higher = more human.
 
     The standard deviation of sentence lengths in words, divided by their mean,
     so a long text and a short one are comparable (the coefficient of
     variation). Even, marching sentences give a number near 0.2; lumpy ones
-    give 0.7 or more.
+    give 0.7 or more. Sentences under `min_words` words (fragments) are not
+    counted; see SPREAD_MIN_SENTENCE_WORDS.
 
-    A text with fewer than two sentences has no spread to measure: this returns
-    0.0, and `style_signal` treats that case as neutral instead of AI-shaped.
+    A text with fewer than two sentences left has no spread to measure: this
+    returns 0.0, and `style_signal` treats that case as neutral instead of
+    AI-shaped.
     """
-    lengths = [len(words(s)) for s in sentences(text)]
-    lengths = [n for n in lengths if n > 0]
+    lengths = spread_lengths(text, min_words)
     if len(lengths) < 2:
         return 0.0
     return statistics.stdev(lengths) / statistics.mean(lengths)
@@ -142,14 +158,15 @@ def style_signal(text: str) -> float:
     flipped and rescaled onto 0–1 between its own anchors, then the three are
     averaged with the weights at the top of this file.
 
-    What it returns for edge cases: a text with fewer than two sentences gets
-    0.5 for the spread part, because there is nothing to compare. An empty text
-    gets 0.5 overall.
+    What it returns for edge cases: a text with fewer than two sentences (not
+    counting fragments under SPREAD_MIN_SENTENCE_WORDS words) gets 0.5 for the
+    spread part, because there is nothing to compare. An empty text gets 0.5
+    overall.
     """
     if not words(text):
         return NEUTRAL
 
-    if len(sentences(text)) < 2:
+    if len(spread_lengths(text)) < 2:
         spread = NEUTRAL
     else:
         spread = _flip_and_scale(sentence_length_spread(text), SPREAD_HUMAN, SPREAD_AI)

@@ -96,9 +96,9 @@
   "guess": "ai"
  },
  "human_01": {
-  "style": 0.0685,
+  "style": 0.1241,
   "model": 0.4036,
-  "combined": 0.1523,
+  "combined": 0.194,
   "guess": "human"
  },
  "human_02": {
@@ -108,10 +108,10 @@
   "guess": "human"
  },
  "human_03": {
-  "style": 0.1208,
+  "style": 0.2905,
   "model": 0.482,
-  "combined": 0.2111,
-  "guess": "human"
+  "combined": 0.3384,
+  "guess": "unsure"
  },
  "human_04": {
   "style": 0.742,

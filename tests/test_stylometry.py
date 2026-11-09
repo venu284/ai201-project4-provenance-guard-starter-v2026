@@ -32,8 +32,10 @@ def test_even_sentences_have_zero_spread():
     assert S.sentence_length_spread(EVEN) == pytest.approx(0.0)
 
 
-def test_lumpy_sentences_have_high_spread():
-    assert S.sentence_length_spread(LUMPY) > 0.7
+def test_lumpy_sentences_have_high_spread_when_fragments_count():
+    """LUMPY is lumpy only because of its one- and two-word sentences."""
+    assert S.sentence_length_spread(LUMPY, min_words=1) > 0.7
+    assert S.spread_lengths(LUMPY, min_words=1) == [1, 2, 30, 1, 2]
 
 
 def test_spread_with_fewer_than_two_sentences_is_zero():
@@ -117,8 +119,12 @@ def test_unicode_and_emoji_do_not_crash():
 def test_known_scores_for_fixed_strings():
     """Pins the signal: if these move, something in stylometry.py changed."""
     assert S.style_signal(EVEN) == 1.0
-    assert S.style_signal(LUMPY) == 0.0625
-    assert S.style_signal(MIDDLING) == 0.3752
+    # Unit 8, Milestone 5: fragments under SPREAD_MIN_SENTENCE_WORDS words stopped
+    # counting in the spread, so these two moved on purpose: LUMPY from 0.0625
+    # (spread read as maximum variety) and MIDDLING from 0.3752 (its one two-word
+    # sentence "Nobody minded." no longer adds variety).
+    assert S.style_signal(LUMPY) == 0.3625
+    assert S.style_signal(MIDDLING) == 0.8099
 
 
 def test_the_signal_is_deterministic():
@@ -131,3 +137,54 @@ def test_a_changed_anchor_moves_the_score(monkeypatch):
     before = S.style_signal(MIDDLING)
     monkeypatch.setattr(S, "SPREAD_HUMAN", 0.45)
     assert S.style_signal(MIDDLING) != before
+
+
+# ── fragments are not sentence lengths (unit 8, Milestone 5) ─────────────────
+
+def test_the_minimum_is_three_words():
+    assert S.SPREAD_MIN_SENTENCE_WORDS == 3
+
+
+def test_fragments_are_left_out_of_the_spread_lengths():
+    assert S.spread_lengths("Really. Yes. This one is a proper sentence. And so is this one here.") == [6, 6]
+    assert S.spread_lengths("Really. Yes. This one is a proper sentence.", min_words=1) == [1, 1, 6]
+
+
+def test_one_word_sentences_added_to_ai_text_do_not_move_the_spread():
+    """The EV02 attack: a one-word sentence after every sentence."""
+    plain = ("The report covers the main findings of the review. It sets out the options that were considered. "
+             "Each option is costed in the annex. The recommendation follows from that comparison.")
+    padded = plain.replace(". ", ". Really. ")
+    assert S.sentence_length_spread(padded) == S.sentence_length_spread(plain)
+    assert S.spread_lengths(padded) == S.spread_lengths(plain)
+    assert S.sentence_length_spread(padded, min_words=1) > S.sentence_length_spread(plain, min_words=1) + 0.5
+
+
+def test_min_words_one_reproduces_the_measure_from_before_the_change():
+    lengths = [len(S.words(s)) for s in S.sentences(LUMPY)]
+    import statistics
+    assert S.sentence_length_spread(LUMPY, min_words=1) == pytest.approx(
+        statistics.stdev(lengths) / statistics.mean(lengths))
+
+
+def test_fewer_than_two_real_sentences_is_neutral_not_ai_shaped():
+    """Fragments plus one real sentence has nothing to compare: spread part 0.5."""
+    text = "Really. Yes. The committee reviewed the proposal and asked for a revised budget before the next meeting."
+    assert len(S.spread_lengths(text)) == 1
+    ttr = S._flip_and_scale(S.type_token_ratio(text), S.TTR_HUMAN, S.TTR_AI)
+    punct = S._flip_and_scale(S.punctuation_density(text), S.PUNCT_HUMAN, S.PUNCT_AI)
+    expected = S.WEIGHT_SPREAD * S.NEUTRAL + S.WEIGHT_TTR * ttr + S.WEIGHT_PUNCT * punct
+    assert S.style_signal(text) == pytest.approx(expected, abs=1e-4)
+
+
+def test_a_long_sentence_among_real_sentences_still_counts():
+    """The change does not touch EV06's lever: one very long sentence."""
+    text = ("It is worth noting that the importance of clear communication in a modern workplace, particularly across "
+            "teams in different time zones reporting into different functions, cannot reasonably be overstated by "
+            "anyone who has watched a project fail for want of one message nobody thought to send. "
+            "Clear communication matters. Teams that communicate clearly do better work. Regular check-ins help.")
+    assert S.sentence_length_spread(text) > S.SPREAD_HUMAN
+
+
+def test_text_with_no_fragments_is_unchanged_by_the_rule():
+    assert S.sentence_length_spread(EVEN) == S.sentence_length_spread(EVEN, min_words=1)

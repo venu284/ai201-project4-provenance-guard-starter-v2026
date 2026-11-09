@@ -24,6 +24,13 @@ What it prints (and writes to results/diagnosis_before.md):
   3. For criterion 3: the combined score of the nine inputs against the two
      thresholds, and how far the best ordinary-AI score is from the AI label.
   4. The plain pieces' distance below the AI label (criterion 1's margin).
+  5. After the Milestone 5 change (sentences under SPREAD_MIN_SENTENCE_WORDS
+     words no longer count in the spread): the same five attacks and the plain
+     pieces, with the same signal-one scores, so only signal two moves.
+
+Sections 1 to 4 describe the service as it was before that change, so they are
+computed with min_words=1 (every sentence counts), whatever stylometry.py does
+now.
 
 Signal-one scores of the counterfactual texts need the model, so they are cached
 in results/diagnosis_model_cache.json (keyed by a hash of the text); --live
@@ -47,7 +54,7 @@ import scoring
 import stylometry as S
 
 CACHE = config.RESULTS_DIR / "diagnosis_model_cache.json"
-OUT = config.RESULTS_DIR / "diagnosis_before.md"
+OUT = config.RESULTS_DIR / "diagnosis.md"
 BROKEN = ["EV02", "EV05", "EV06", "PI01", "PI02"]
 
 STOCK_START = "The importance of effective communication in the workplace cannot be overstated."
@@ -55,32 +62,44 @@ STOCK_START = "The importance of effective communication in the workplace cannot
 
 # ── the measures ─────────────────────────────────────────────────────────────
 
-def measures(text: str) -> dict:
-    """Raw measures, their scaled parts and the weighted style score for one text."""
+def measures(text: str, min_words: int = 1) -> dict:
+    """
+    Raw measures, their scaled parts and the weighted style score for one text.
+
+    `min_words` is the shortest sentence counted in the spread: 1 is the service
+    before Milestone 5, S.SPREAD_MIN_SENTENCE_WORDS is the service now. The style
+    score is rebuilt here the way stylometry.style_signal builds it, so either
+    view can be reproduced whatever the module's default is.
+    """
     sents = S.sentences(text)
     lengths = [len(S.words(s)) for s in sents]
+    kept = S.spread_lengths(text, min_words)
     raw = {
-        "spread": S.sentence_length_spread(text),
+        "spread": S.sentence_length_spread(text, min_words),
         "ttr": S.type_token_ratio(text),
         "punct": S.punctuation_density(text),
     }
     scaled = {
-        "spread": S._flip_and_scale(raw["spread"], S.SPREAD_HUMAN, S.SPREAD_AI),
+        "spread": (S.NEUTRAL if len(kept) < 2
+                   else S._flip_and_scale(raw["spread"], S.SPREAD_HUMAN, S.SPREAD_AI)),
         "ttr": S._flip_and_scale(raw["ttr"], S.TTR_HUMAN, S.TTR_AI),
         "punct": S._flip_and_scale(raw["punct"], S.PUNCT_HUMAN, S.PUNCT_AI),
     }
+    contribution = {
+        "spread": S.WEIGHT_SPREAD * scaled["spread"],
+        "ttr": S.WEIGHT_TTR * scaled["ttr"],
+        "punct": S.WEIGHT_PUNCT * scaled["punct"],
+    }
+    style = S.NEUTRAL if not S.words(text) else round(min(1.0, max(0.0, sum(contribution.values()))), 4)
     return {
         "words": len(S.words(text)),
         "sentences": len(sents),
         "lengths": lengths,
+        "kept": kept,
         "raw": raw,
         "scaled": scaled,
-        "contribution": {
-            "spread": S.WEIGHT_SPREAD * scaled["spread"],
-            "ttr": S.WEIGHT_TTR * scaled["ttr"],
-            "punct": S.WEIGHT_PUNCT * scaled["punct"],
-        },
-        "style": S.style_signal(text),
+        "contribution": contribution,
+        "style": style,
     }
 
 
@@ -221,6 +240,35 @@ def build(live: bool) -> tuple[str, dict]:
             lines.append(f"| own_{n:02d} (plain) | {c:.3f} | {config.AI_THRESHOLD - c:.3f} |")
     detail["criterion3_best_ai"] = best_ai
     detail["plain_margins"] = margins
+
+    # Section 5: the same texts and the same signal-one scores, after the change
+    n = S.SPREAD_MIN_SENTENCE_WORDS
+    lines += ["", f"## 5. After the Milestone 5 change (sentences under {n} words no longer count in the spread)", "",
+              "Signal-one scores are the ones the service returned before; only signal two changes. "
+              "Sentence lengths are the ones that still count.", "",
+              "| Text | Counted sentence lengths | Spread raw | Spread scaled | Style (before > after) | Model | "
+              "Combined (before > after) | Label (before > after) |",
+              "|---|---|---|---|---|---|---|---|"]
+    detail["after"] = {}
+
+    def after_row(name, text, model, before_style):
+        m = measures(text, n)
+        c_before = scoring.combine_signals(model, before_style)
+        c_after = scoring.combine_signals(model, m["style"])
+        lab_before, lab_after = scoring.score_to_label(c_before)[0], scoring.score_to_label(c_after)[0]
+        detail["after"][name] = {"style": m["style"], "combined": c_after, "label": lab_after,
+                                 "combined_before": c_before}
+        lines.append(f"| {name} | {', '.join(map(str, m['kept']))} | {m['raw']['spread']:.2f} | "
+                     f"{m['scaled']['spread']:.2f} | {before_style:.3f} > {m['style']:.3f} | {model:.3f} | "
+                     f"{c_before:.3f} > {c_after:.3f} | {lab_before} > {lab_after} |")
+
+    for i in BROKEN:
+        run = rows[i]["run"]
+        after_row(i, rows[i]["text"], run["model_score"], run["style_score"])
+    scen = {s_["name"]: s_ for s_ in eval_verdicts.scenarios.SCENARIOS}
+    for k, (text, result) in enumerate(zip(scen["my own writing"]["texts"], report["my own writing"][1]), 1):
+        if k >= 8:
+            after_row(f"own_{k:02d} (plain)", text, result["model_score"], result["style_score"])
 
     if live:
         CACHE.write_text(json.dumps(cache, indent=1) + "\n", encoding="utf-8")
