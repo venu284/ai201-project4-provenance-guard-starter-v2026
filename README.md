@@ -552,22 +552,109 @@ Numbers are from `python diagnose.py` (`results/diagnosis_before.md`), which als
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** one thing, in `stylometry.py`: sentences shorter than 3 words are no longer counted when measuring how much sentence length varies (`SPREAD_MIN_SENTENCE_WORDS = 3`). A one- or two-word sentence like "Really." or "True." is a fragment, not a sentence length, so it does not add to the spread any more. If fewer than two real sentences are left, that part of the style signal is neutral (0.5), the same as for a one-sentence text, instead of reading as AI-shaped. No weight, anchor, threshold or label text changed. Commit `1f502b9`.
 
-**Which diagnosis pointed at it:**
+**Which diagnosis pointed at it:** the pattern in the Diagnoses above. All five broken attacks had the spread part of signal two at 0.00 because fragments (EV02's six "Really." sentences, the single-word sentence in EV05, the cut-off "Th" in PI01 and PI02) or one 51-word sentence (EV06) pushed the spread past the human anchor, and the combining rule turned that into "human". I tried the alternatives against the same texts first, offline, with the model scores already recorded (so the numbers are exact). Lowering the weight on the lower signal to 0.60 or 0.50 fixed some breaks but labelled FP05, a real person's technical documentation, "ai", which is the expensive error. Merging short sentences into the previous one fixed the same attacks but moved more human texts; a cap on sentence length needed a second edit on top of the fragment rule; a robust spread measure (median instead of standard deviation) made one more attack break. Ignoring fragments labelled nobody "ai".
+
+The success test was written before the change: it helped if (a) fewer attacks break, (b) no real writer's text is newly labelled "ai", and (c) no criterion that was MET becomes MISSED.
 
 ### Attack Run — After
 
-<!-- Same format. `run_attacks.py --label after` -->
+`python run_attacks.py --set attack_set --label after`, the same 56 attacks, the same rules (`attack_verdicts.py`, including the flood amendment), the service restarted fresh, nothing else changed. Reports: `results/attack_run_2026-11-08_2319_after.md` and its flood replay; verdicts `results/attack_verdicts_after.md`; the before and after side by side in `results/before_after.md` (`python compare_runs.py`). The audit log holds one entry per request, nine fields each, and the server log shows no traceback or 5xx. The log of the before run is kept in `results/audit_before.jsonl`.
 
+**Result: 56 attacks, 54 held, 2 broke** (before: 51 held, 5 broke).
 
+| Family | Attacks | Held before > after | Broke before > after |
+|---|---|---|---|
+| evasion | 10 | 7 > 9 | 3 > 1 (EV06) |
+| false_positive | 8 | 8 > 8 | 0 > 0 |
+| prompt_injection | 6 | 4 > 5 | 2 > 1 (PI02) |
+| malformed | 20 | 20 > 20 | 0 > 0 |
+| flood_same_creator | 12 | 12 > 12 | 0 > 0 |
+
+Every attack, before and after (where a cell has no arrow nothing changed):
+
+| ID | Family | Status | Guess before / after | Combined before / after | Verdict before / after |
+|---|---|---|---|---|---|
+| EV01 | evasion | 200 | unsure | 0.308 | HELD |
+| EV02 | evasion | 200 | human > unsure | 0.258 > 0.632 | BROKE > HELD |
+| EV03 | evasion | 200 | unsure | 0.456 > 0.577 | HELD |
+| EV04 | evasion | 200 | unsure | 0.644 | HELD |
+| EV05 | evasion | 200 | human > unsure | 0.214 > 0.322 | BROKE > HELD |
+| EV06 | evasion | 200 | human | 0.253 | BROKE |
+| EV07 | evasion | 200 | unsure | 0.422 | HELD |
+| EV08 | evasion | 400 | — | — | HELD |
+| EV09 | evasion | 200 | unsure | 0.445 > 0.615 | HELD |
+| EV10 | evasion | 200 | unsure | 0.810 | HELD |
+| FP01 | false_positive | 200 | unsure | 0.553 | HELD |
+| FP02 | false_positive | 200 | unsure | 0.766 | HELD |
+| FP03 | false_positive | 200 | unsure | 0.725 | HELD |
+| FP04 | false_positive | 200 | unsure | 0.715 | HELD |
+| FP05 | false_positive | 200 | unsure | 0.839 | HELD |
+| FP06 | false_positive | 200 | unsure | 0.549 | HELD |
+| FP07 | false_positive | 200 | unsure | 0.517 | HELD |
+| FP08 | false_positive | 400 | — | — | HELD |
+| PI01 | prompt_injection | 200 | human > unsure | 0.228 > 0.376 | BROKE > HELD |
+| PI02 | prompt_injection | 200 | human | 0.150 > 0.241 | BROKE |
+| PI03 | prompt_injection | 200 | unsure | 0.568 | HELD |
+| PI04 | prompt_injection | 200 | unsure | 0.491 | HELD |
+| PI05 | prompt_injection | 200 | unsure | 0.325 | HELD |
+| PI06 | prompt_injection | 200 | unsure | 0.535 | HELD |
+| MF01 | malformed | 400 | — | — | HELD |
+| MF02 | malformed | 400 | — | — | HELD |
+| MF03 | malformed | 400 | — | — | HELD |
+| MF04 | malformed | 400 | — | — | HELD |
+| MF05 | malformed | 400 | — | — | HELD |
+| MF06 | malformed | 400 | — | — | HELD |
+| MF07 | malformed | 400 | — | — | HELD |
+| MF08 | malformed | 413 | — | — | HELD |
+| RQ01 | malformed | 400 | — | — | HELD |
+| RQ02 | malformed | 400 | — | — | HELD |
+| RQ03 | malformed | 400 | — | — | HELD |
+| RQ04 | malformed | 400 | — | — | HELD |
+| RQ05 | malformed | 400 | — | — | HELD |
+| RQ06 | malformed | 400 | — | — | HELD |
+| RQ07 | malformed | 400 | — | — | HELD |
+| RQ08 | malformed | 400 | — | — | HELD |
+| RQ09 | malformed | 400 | — | — | HELD |
+| RQ10 | malformed | 400 | — | — | HELD |
+| RQ11 | malformed | 400 | — | — | HELD |
+| RQ12 | malformed | 400 | — | — | HELD |
+| FL01_01 | flood_same_creator | 400 | — | — | HELD |
+| FL01_02 | flood_same_creator | 400 | — | — | HELD |
+| FL01_03 | flood_same_creator | 400 | — | — | HELD |
+| FL01_04 | flood_same_creator | 400 | — | — | HELD |
+| FL01_05 | flood_same_creator | 400 | — | — | HELD |
+| FL01_06 | flood_same_creator | 400 | — | — | HELD |
+| FL01_07 | flood_same_creator | 400 | — | — | HELD |
+| FL01_08 | flood_same_creator | 400 | — | — | HELD |
+| FL01_09 | flood_same_creator | 400 | — | — | HELD |
+| FL01_10 | flood_same_creator | 400 | — | — | HELD |
+| FL01_11 | flood_same_creator | 400 | — | — | HELD |
+| FL01_12 | flood_same_creator | 400 | — | — | HELD |
+
+The five criteria, three trials each, before and after (same scenarios, same rules, nothing else changed; the three trials are identical every time):
+
+| Criterion | Before: run 1, 2, 3 | After: run 1, 2, 3 | Verdict |
+|---|---|---|---|
+| 1. My own writing flagged as AI | 0/10 / 0/10 / 0/10 | 0/10 / 0/10 / 0/10 | MET > MET |
+| 2. Clearly-AI and clearly-human texts score far apart | 0.369 / 0.369 / 0.369 | 0.369 / 0.369 / 0.369 | MET > MET |
+| 3. All three labels are reachable | 2/3 labels, 3/3 unsure / 2/3 labels, 3/3 unsure / 2/3 labels, 3/3 unsure | 2/3 labels, 3/3 unsure / 2/3 labels, 3/3 unsure / 2/3 labels, 3/3 unsure | MISSED > MISSED |
+| 4. An appeal always changes status and is recorded | 5/5, unknown id 404 / 5/5, unknown id 404 / 5/5, unknown id 404 | 5/5, unknown id 404 / 5/5, unknown id 404 / 5/5, unknown id 404 | MET > MET |
+| 5. Bad input never crashes the service | 8/8 / 8/8 / 8/8 | 8/8 / 8/8 / 8/8 | MET > MET |
 
 **Did it help, and how do I know:**
 
-<!-- Widening the unsure band usually fixes one problem and creates another.
-     Reporting that trade honestly is worth full credit. -->
+**Yes, partly: three of the five broken attacks no longer break (5 broke before, 2 after), no real writer's text became "ai", and no criterion moved.** All three parts of the success test passed (`results/before_after.md`). EV02, EV05 and PI01 went from "human" to "unsure" (combined 0.258 to 0.632, 0.214 to 0.322, 0.228 to 0.376), the signal-one scores were untouched, and only 6 of 56 attacks changed in any way. EV03 and EV09 stayed "unsure" but read more AI-like (0.456 to 0.577, 0.445 to 0.615).
 
+What it did not fix, and what it cost:
 
+- **It stops calling these texts human; it does not catch them.** The three fixed attacks are now "unsure", not "ai". The service is less easy to fool into a confident "human" and no better at saying "AI".
+- **EV06 and PI02 still break.** EV06 is one very long sentence, which the change does not touch (spread 1.03 after dropping its one-word sentence). PI02 is the injected "SYSTEM:" prefix: it raises the model's perplexity (signal one 0.204), so signal one still reads it as human, and the style signal only rose to 0.353.
+- **Writers who use short sentences read less human.** The same rule that removes the attackers' fragments removes a human signal from honest writing that uses them. In the calibration set `human_03` (a messy, fragment-heavy imitation) moved from combined 0.211, "human", to 0.338, "unsure", and `human_01` from 0.152 to 0.194. Among the ten own-writing pieces `own_06` went from "human" to "unsure" (0.292 to 0.357), and the two plain pieces moved toward the AI label: `own_09` 0.708 to 0.767 and `own_10` 0.667 to 0.811, now only 0.039 below it. Criterion 1 still passes (0 of 10), but its margin is thinner than before.
+- **EV05 is a trade, not a clean win.** It was a genuine human-voiced rewrite, so "human" was arguably the right answer. The change turned it into "unsure", for the same reason it turned `human_03` into "unsure".
+- **Criterion 3 is untouched** (still MISSED, still two labels), as predicted: the change does not move any AI text toward the "ai" label.
+- **The evidence is optimistic.** I chose the change with the attack set and the criteria texts in view, and there is no untouched test set, so the improvement may be smaller on new inputs.
 
 ---
 
@@ -610,7 +697,7 @@ Numbers are from `python diagnose.py` (`results/diagnosis_before.md`), which als
        [x] Ten audit log entries pasted as text
        [x] Five criteria across three trials
        [x] A diagnosis for every miss and every broken attack — stage AND mechanism
-       [ ] One improvement, with Attack Run — After
+       [x] One improvement, with Attack Run — After
        [ ] What's Still Broken, including the production trade
        [ ] At least four new commits
        [ ] The SAME repository URL as last unit
