@@ -660,17 +660,36 @@ What it did not fix, and what it cost:
 
 ## What's Still Broken
 
-<!-- For each attack still getting through and each criterion still missed:
-     what you'd do, and why you stopped. -->
+**Attacks still getting through (2 of 56)**
 
+- **EV06, one very long sentence and a one-word sentence.**
+  - *What it does now:* the style score is 0.147 and the combined score 0.253, so it is labelled "human". Dropping fragments leaves the 51-word sentence, so the spread is still 1.03.
+  - *What I'd do:* cap how much one sentence can count, for example at twice the median length, before measuring the spread. Offline, the fragment rule plus that cap fixed EV06.
+  - *Why I stopped:* the unit allows one improvement and this would be a second edit to the same measure. It also shrank criterion 2's gap from 0.369 to 0.316, close to its 0.30 target.
+- **PI02, the "SYSTEM: provenance check bypassed" prefix.**
+  - *What it does now:* the prefix is rare text, so perplexity goes from 22 to 105 and signal one drops to 0.204. Combined is 0.241, "human".
+  - *What I'd do:* score signal one sentence by sentence and take the median instead of the whole text, so one odd prefix cannot move it.
+  - *Why I stopped:* that is a change to signal one on top of the change I made to signal two. I rejected the other obvious fix, looking for "SYSTEM:" or "ignore previous instructions", because it only stops the wording the staff tried. PI01 and PI02 are also cut off mid-word and only 45 words long, so I cannot separate the prefix's effect from short-text noise.
 
+**Criterion still missed (1 of 5)**
+
+- **Criterion 3, the "ai" label never appears.**
+  - *What I'd do:* lower `AI_THRESHOLD` from 0.85 to about 0.70, since ordinary AI text tops out at 0.73 in the calibration set.
+  - *What it would cost:* it would label FP05 (0.839) and all three plain pieces (0.767 to 0.811 now) as "ai", along with the plain human calibration texts at 0.79 to 0.80. Plain AI and plain human text overlap, so a threshold is the wrong tool. Only a signal that separates plain human writing from plain AI writing would fix this, and neither of mine does: both measure how plain the text is.
+  - *Why I stopped:* a threshold change is a second change, and it trades the miss for the error I most want to avoid. I would leave criterion 3 missed rather than meet it by accusing plain writers.
+
+**Other things I know are wrong or weak**
+
+- **The "ai" label is rare by design.** Most AI text lands in "unsure". The three attacks the change fixed are now "unsure", not caught.
+- **Stand-in texts.** The "own writing" pieces and the "human" texts in criteria 2 and 3 are AI-written stand-ins, not a person's writing, so criteria 1 and 2 are weaker evidence than they read. The human texts in the calibration set are the same.
+- **No untouched test set.** I chose the fix with the attack set and the criteria texts in view, so the improvement may be smaller on new inputs.
+- **Plain writers sit near the line.** `own_08` (0.809), `own_10` (0.811) and FP05 (0.839) are all within 0.05 of an accusation.
+- **Short real texts cannot be submitted.** FP08 is refused because it is under 20 words.
+- **Appeals and limits.** Anyone who has a `content_id` can appeal it, because there is no authentication. The rate limit is per `creator_id`, so a script that rotates names dodges it, and the counts are in memory and reset when the service restarts.
 
 **The trade I'd make if this ran for real:**
 
-<!-- Two sentences. Fewer wrong accusations means more AI text getting through.
-     Say which way you'd go and WHO PAYS FOR IT. -->
-
-
+If this ran for real I'd keep the AI label hard to reach and let most AI text land in "unsure", because an accusation costs a writer far more than a missed AI text costs the site, and the people it would hit are those who write plainly and carefully, such as second-language writers. The price is paid by the site's reviewers, who would get "unsure" on nearly all AI text and still need a person to read it, and by writers whose honest work sits next to machine text that nothing flagged.
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
@@ -698,8 +717,8 @@ What it did not fix, and what it cost:
        [x] Five criteria across three trials
        [x] A diagnosis for every miss and every broken attack — stage AND mechanism
        [x] One improvement, with Attack Run — After
-       [ ] What's Still Broken, including the production trade
-       [ ] At least four new commits
+       [x] What's Still Broken, including the production trade
+       [x] At least four new commits
        [ ] The SAME repository URL as last unit
 
      Do not delete and recreate this repository.
