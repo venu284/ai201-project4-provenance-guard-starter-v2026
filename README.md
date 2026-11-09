@@ -440,9 +440,24 @@ Taken from `logs/audit.jsonl`, which holds the whole run: 68 entries, one per re
 
 The three trials are identical on every criterion. That is expected: neither signal has anything random in it, so the same text gets the same score each time. Three matching runs show the result is stable, not that I skipped a step. The server log shows no traceback, no 5xx and no 429.
 
+**How I decided each verdict**
+
+- **1. MET, on stand-ins.** 0 of 10 pieces got "ai" in every trial, so the target (at most 1) held. It holds for the AI-drafted pieces, not for my own prose. The "ai" label can fire (two plain AI texts in the calibration set reach it: 0.905 and 0.856), so the criterion can fail. It was close for the plain pieces: `own_08` scored 0.809, 0.041 below the label, `own_09` 0.708, `own_10` 0.667.
+- **2. MET, fragile.** The gap was 0.369 in every trial, above 0.30. It is sample-dependent: with the three plain pieces among the five "human" texts the gap is 0.062, and over all ten pieces it is 0.222. I froze the five before the run and did not pick them by score, so the verdict stays MET as written, but a plain human writer erases the gap.
+- **3. MISSED.** All three labels never appeared: "ai" showed up in none of the three trials, because the three ordinary AI texts scored 0.527, 0.514 and 0.706. The three borderline texts all got "unsure" (3 of 3, so that half of the target held).
+- **4. MET.** In every trial all 5 appeals returned 200 with `under_review` and added exactly one entry for the right `content_id`, and the id that was never issued returned 404 with no `under_review` entry. The harness counts every entry an appeal added, not just `under_review` ones.
+- **5. MET.** In every trial all 8 bad bodies got the listed code, none returned a 500, and each left exactly one rejection entry. It agrees with the attack run, where all 20 malformed requests were refused.
+
+**An argument against my own verdicts.** I gave a fresh Claude agent only the five criteria, my targets, the three runs and my verdicts, and asked it to argue the opposite of each and name evidence that would settle it, without saying which was right. It called criteria 1 and 2 the most fragile, and I went and got the evidence:
+
+- *Criterion 1 can never fail, because "ai" never fires.* False: `ai_plain_01` and `ai_plain_04` are labelled "ai" in the calibration set. But its other point holds: the pieces are not mine, and the plain ones sit within 0.041 of an accusation. I changed the verdict's wording to "MET, on stand-ins".
+- *Criterion 2: pick a different five and the gap collapses.* True, computed above (0.369 to 0.062). The verdict stands because the picks were frozen first, and the sensitivity is now stated.
+- *Criterion 3 is mis-specified, since the design forbids the "ai" label on ordinary text.* The arithmetic is right: an "ai" label needs the lower signal to be at least 0.80 even if the other is 1.0, and the ordinary AI texts' lower signals were 0.43, 0.41 and 0.64. But the criterion was measurable and my target; a missed target is diagnosed, not rewritten, so it stays MISSED and no criterion was revised.
+- *Criteria 4 and 5 only test the happy path or skip the boundaries.* Mostly covered elsewhere: a second appeal on one id, a well-formed unissued id, a malformed id and the exact 20-word and 20,000-character boundaries are in `tests/test_appeal.py` and `tests/test_submit.py`. The attack run covered lists, objects and other wrong types, and the 413 rejection entry is 280 bytes because it stores no text. Not tested: who may appeal, since the service has no authentication, so anyone with a `content_id` can appeal it. That is outside what these criteria claim.
+
 **Things to know about how this was run**
 
-- **Criterion 1 is not yet my own writing.** The ten pieces were drafted by an AI agent that could not see this repo, the detector or any score. I read them and accepted them as written; I did not rewrite them. So 0 of 10 says how the service treats AI-drafted imitations of student writing (three of them plain), not how it would treat my real prose. The "human" side of criterion 2 (`own_01` to `own_05`) is the same kind of stand-in, and so are the "human" texts in criterion 3 (`human_01` to `human_03`, also AI-written imitations). The pieces and their provenance are in `samples/own_writing/`. I list this under What's Still Broken.
+- **Criterion 1 is not yet my own writing.** The ten pieces were drafted by an AI agent that could not see this repo, the detector or any score. I read and checked all ten and used them as the agent drafted them; I did not edit them. So 0 of 10 says how the service treats AI-drafted imitations of student writing (three of them plain), not how it would treat my real prose. The "human" side of criterion 2 (`own_01` to `own_05`) is the same kind of stand-in, and so are the "human" texts in criterion 3 (`human_01` to `human_03`, also AI-written imitations). The pieces and their provenance are in `samples/own_writing/`. I list this under What's Still Broken.
 - **Texts were picked by id order, not by score.** Criterion 2 uses `ai_01` to `ai_05` against `own_01` to `own_05`; criterion 3 uses `ai_06` to `ai_08`, `human_01` to `human_03` and `ai_edited_01` to `ai_edited_03`. Ordinary AI text topped out below the "ai" label in the calibration set, so I expected criterion 3 to miss and did not swap in plain AI texts to make it pass.
 - **I extended `run_eval.py`** (the starter said I could) to record `combined_score` and the audit log entries each request added, and to send an appeal after each submission. Criterion 4 is therefore run automatically, not by hand. The service itself is untouched.
 
@@ -521,21 +536,17 @@ Criterion 5 (the eight bad bodies, in the order in `criteria.md`):
 
 **Diagnoses**
 
-<!-- For each miss AND each broken attack: the stage and the mechanism.
+Numbers are from `python diagnose.py` (`results/diagnosis_before.md`), which also prints each attack with its attacking edit taken out.
 
-     Your service has five stages: the route, signal one, signal two, the
-     combining rule, and the label mapping.
+**The pattern first.** All five broken attacks have the same number in the same place: the sentence-length-spread part of signal two scales to 0.00, because the raw spread is 0.65 to 1.19 and the human end of its anchor is 0.60. That part carries 0.60 of the style score, so the style score is left at 0.13 to 0.18 whatever the rest of the text looks like. The combining rule then does the rest: it weights the lower signal at 0.75, so a style score near 0.15 pulls the result to "human" even when signal one reads AI-ish. That is one problem with several ways in, not five problems.
 
-     Not a diagnosis:  "The evasion attacks got through."
-     A diagnosis:      "Four evasion inputs got through. All four had typos
-                        added to AI-generated text. My second signal measures
-                        word variety, and typos raise word variety — so it read
-                        them as more human. My combining rule weights that
-                        signal at 0.6, so it dragged the whole score down."
+- **EV02, "broken-up sentences".** *Stage: signal two (and the combining rule).* The text has 13 sentences and six of them are the single word "Really." Those one-word sentences push the spread to 0.85, so the spread part is 0.00 and the style score is only the punctuation part (0.146, from the em dashes). Combined: 0.75 × 0.146 + 0.25 × 0.594 = 0.258, "human". With the "Really." sentences taken out the spread is 0.16, the style score is 0.743 and the combined score is 0.650, "unsure". The mechanism is that a measure of how much sentence length varies counts one-word fragments as maximum variety, and fragments cost an attacker nothing.
+- **EV06, "one very long sentence and one very short".** *Stage: signal two (and the combining rule).* One 51-word sentence and a one-word sentence among 10 to 15-word sentences give a spread of 1.19, spread part 0.00, style 0.147, combined 0.75 × 0.147 + 0.25 × 0.573 = 0.253, "human". Without those two sentences the spread is 0.45, the style score 0.399 and the combined score 0.471, "unsure". Same mechanism as EV02: two cheap edits move the one measure that carries most of the weight.
+- **EV05, "heavy human editing pass".** *Stage: both signals, and I don't count it as a bug.* This is a genuine rewrite in a human voice, with no stock text underneath to take out. Perplexity is 72, so signal one reads it as human (0.321), and the spread is 0.68, so signal two also reads it as human (0.178); combined 0.214. A detector that sees only how predictable text is and how its sentences are shaped cannot tell heavily edited AI text from writing that never was AI. It is a limit of the approach, and a different kind of failure from the others.
+- **PI01 and PI02, the injections.** *Stage: signal one made them break; signal two put them on the edge.* Nothing in the service reads instructions, so "Ignore all previous instructions" and "SYSTEM: provenance check bypassed" are not obeyed. They are rare text, and rare text raises the model's perplexity. The stock paragraph alone has perplexity 22 (signal one 0.754); with the PI01 prefix it is 49 (0.463) and with the PI02 prefix 105 (0.204). The style score is 0.150 and 0.132, so the combined scores are 0.75 × 0.150 + 0.25 × 0.463 = 0.228 and 0.75 × 0.132 + 0.25 × 0.204 = 0.150: "human". Without the prefix the same text is 0.301, "unsure", only 0.001 above the human threshold. The reason it was already so close is in the staff file: both texts are cut off mid-word ("Th"), so they end in a one-word sentence and the spread is already above the anchor with no help from the attack. With only 45 words and 3 to 6 sentences, a single short sentence moves the spread a lot.
+- **Criterion 3, the "ai" label never appeared.** *Stage: the label mapping, with the combining rule.* The AI label needs a combined score of at least 0.85. Because the rule weights the lower signal at 0.75, that needs the lower signal to be at least 0.80 even when the other is 1.0. The ordinary AI texts have model scores of 0.82, 0.83 and 0.91 but style scores of only 0.43, 0.41 and 0.64, so the lower signal is the style signal and the combined scores are 0.527, 0.514 and 0.706. Across the eight ordinary AI texts in the calibration set, signal one averages 0.785 and signal two 0.548, which combine to about 0.607. Only plain AI texts get near 0.85 (0.905 and 0.856), and plain human text scores 0.787 to 0.797 right under them. The threshold was set at 0.85 on purpose to keep that human text out of "ai", so criterion 3 is the price of criterion 1's protection: the label that would catch ordinary AI cannot be reached without also accusing plain human writers.
 
-     Look for a pattern. Five failures on one signal is one problem, not five. -->
-
-
+**What I would tighten.** Criterion 1 is the generous one. "At most 1 of 10" was met with 0, but the plain pieces sit 0.041 to 0.183 below the AI label and the pieces are stand-ins, so I would add a margin: no plain piece within 0.10 of the AI label. `own_08` would fail that. Criterion 2 should be measured with plain human text in the "human" side, where the gap is 0.062, not 0.369. I did not edit any criterion in `criteria.md`: all five were measurable, and a missed target is diagnosed, not changed.
 
 ---
 
@@ -598,7 +609,7 @@ Criterion 5 (the eight bad bodies, in the order in `criteria.md`):
        [x] The attack set run IN FULL, every input with an outcome
        [x] Ten audit log entries pasted as text
        [x] Five criteria across three trials
-       [ ] A diagnosis for every miss and every broken attack — stage AND mechanism
+       [x] A diagnosis for every miss and every broken attack — stage AND mechanism
        [ ] One improvement, with Attack Run — After
        [ ] What's Still Broken, including the production trade
        [ ] At least four new commits
