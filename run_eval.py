@@ -66,6 +66,87 @@ def describe(body):
     return json.dumps(body)[:120]
 
 
+# ── Milestone 3 extension: record what the audit log did, and appeal ─────────
+# The starter recorded only the response. Criteria 4 and 5 are about the log
+# (an appeal adds exactly one entry; a rejection leaves one), and criterion 4
+# needs a submission followed by an appeal, so this reads GET /log around every
+# request and can send an appeal. The service is not touched.
+
+def fetch_log(http, url):
+    """Every audit log entry, oldest first, or None if it cannot be read."""
+    try:
+        return http.get(f"{url}/log", timeout=10).json()["entries"]
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _compact(entry):
+    keys = ("content_id", "creator_id", "event", "status", "reason", "http_status")
+    return {k: entry.get(k) for k in keys}
+
+
+def new_entries(before, after):
+    """The log entries added between two reads (the log is append-only)."""
+    if before is None or after is None:
+        return None
+    return [_compact(e) for e in after[len(before):]]
+
+
+def send_body(http, url, body, timeout):
+    """One POST /submit, with the log entries it added."""
+    preview = describe(body)
+    before = fetch_log(http, url)
+    try:
+        response = http.post(f"{url}/submit", json=body, timeout=timeout)
+        payload = response.json() if response.content else {}
+        result = {
+            "status": response.status_code,
+            "content_id": payload.get("content_id"),
+            "guess": payload.get("guess"),
+            "confidence": payload.get("confidence"),
+            "model_score": payload.get("model_score"),
+            "style_score": payload.get("style_score"),
+            "combined_score": payload.get("combined_score"),
+            "label": payload.get("label"),
+            "sent": preview,
+        }
+    except Exception as exc:  # noqa: BLE001
+        result = {"status": None, "error": f"{type(exc).__name__}: {exc}", "sent": preview}
+    result["new_entries"] = new_entries(before, fetch_log(http, url))
+    return result
+
+
+def send_appeal(http, url, content_id, timeout):
+    """One POST /appeal, with the log entries it added."""
+    before = fetch_log(http, url)
+    try:
+        response = http.post(f"{url}/appeal",
+                             json={"content_id": content_id,
+                                   "reasoning": "I wrote this myself."},
+                             timeout=timeout)
+        payload = response.json() if response.content else {}
+        result = {"appeal_status": response.status_code,
+                  "appeal_state": payload.get("status")}
+    except Exception as exc:  # noqa: BLE001
+        result = {"appeal_status": None, "appeal_error": f"{type(exc).__name__}: {exc}"}
+    result["appeal_new_entries"] = new_entries(before, fetch_log(http, url))
+    return result
+
+
+def run_scenario_once(http, url, scenario, timeout):
+    """One trial of one scenario: every body, plus appeals where asked."""
+    results = []
+    for body in bodies_for(scenario):
+        result = send_body(http, url, body, timeout)
+        if scenario.get("appeal") and result.get("content_id"):
+            result.update(send_appeal(http, url, result["content_id"], timeout))
+        results.append(result)
+    for unknown in scenario.get("unknown_ids", []):
+        results.append({"unknown_id": unknown, "sent": unknown,
+                        **send_appeal(http, url, unknown, timeout)})
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -112,25 +193,7 @@ def main():
 
         trials = []
         for trial in range(1, args.trials + 1):
-            results = []
-            for i, body in enumerate(bodies_for(scenario), 1):
-                preview = describe(body)
-                try:
-                    response = requests.post(f"{args.url}/submit", json=body,
-                                             timeout=args.timeout)
-                    payload = response.json() if response.content else {}
-                    results.append({
-                        "status": response.status_code,
-                        "guess": payload.get("guess"),
-                        "confidence": payload.get("confidence"),
-                        "model_score": payload.get("model_score"),
-                        "style_score": payload.get("style_score"),
-                        "label": payload.get("label"),
-                        "sent": preview,
-                    })
-                except Exception as exc:  # noqa: BLE001
-                    results.append({"status": None, "error": f"{type(exc).__name__}: {exc}",
-                                    "sent": preview})
+            results = run_scenario_once(requests, args.url, scenario, args.timeout)
 
             trials.append(results)
             guesses = [r.get("guess") or "—" for r in results]

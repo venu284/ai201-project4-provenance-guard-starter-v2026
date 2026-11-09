@@ -1,0 +1,9 @@
+Tues 14 Oct, titration, practical 4
+
+Made up 0.1 M NaOH this morning but I think I misread the balance, got 4.12 g instead of 4.00 g, so the concentration is a bit high (approx 0.103 M). Recalculated, will use the corrected value.
+
+Trial 1 was rough, overshot the endpoint badly, solution went bright pink. Ignore. Trials 2 to 4 much better: 23.45, 23.50, 23.40 mL. Mean 23.45. Concordant within 0.1 so that's fine.
+
+Burette on bench 6 has a slow drip from the tap, told Dr. Asante, she said use bench 7 next time. Phenolphthalein bottle was almost empty, someone should refill it.
+
+Need to ask Marcus whether we're meant to include trial 1 in the uncertainty section or just mention it. Write-up due Friday 5pm.

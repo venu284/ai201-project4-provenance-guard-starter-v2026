@@ -1,0 +1,7 @@
+How to get the ancient printer in the common room to actually work (for new people in Barton House):
+
+1. Don't hit Print on your laptop straight away. Go to the printer first and check it says READY, not SLEEP. If it's asleep, press the green button twice, once doesn't do anything for some reason.
+2. Connect to the BartonPrint wifi, not the house wifi. The password is on a sticky note on the side, it's the one that's been crossed out and rewritten.
+3. Print one page first as a test. If it comes out with a grey stripe down the middle, open the front panel, take the toner out, shake it side to side a few times and put it back.
+4. If it jams, pull the paper out from the back, never the front. Jake learned this the hard way.
+5. Spare paper is in the cupboard under the kettle.

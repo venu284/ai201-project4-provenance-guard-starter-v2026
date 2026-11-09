@@ -1,0 +1,65 @@
+{
+ "provenance": "Drafted by an AI agent that had no access to this repo, the detector or any score. Reviewed and accepted by the student as written; not rewritten. They are stand-ins for the student's own writing, so criterion 1 measures AI-drafted imitations of student writing, not the student's own prose. The README says so.",
+ "pieces": [
+  {
+   "file": "own_01.txt",
+   "kind": "varied",
+   "form": "personal anecdote",
+   "sha256": "ade34eadeadc9cb90aa9d4318e22ecea6deac79063d367b0a4894ecf0d5024e5"
+  },
+  {
+   "file": "own_02.txt",
+   "kind": "varied",
+   "form": "email to a landlord",
+   "sha256": "38aba09b9ce93ab7fec7d6d2615c61d59b1cd91b0762def648ce3ce3ee5e52a9"
+  },
+  {
+   "file": "own_03.txt",
+   "kind": "varied",
+   "form": "opinion paragraph",
+   "sha256": "b5a03932c5d729fdf51eae3543873faaaa0ab4004448c9eeea6cbb494c8073a9"
+  },
+  {
+   "file": "own_04.txt",
+   "kind": "varied",
+   "form": "chemistry lab notebook entry",
+   "sha256": "00e5e7f4d19a811624d520178e8f7ef11b6a3f2965f90b711861465c1548acab"
+  },
+  {
+   "file": "own_05.txt",
+   "kind": "varied",
+   "form": "casual personal reflection",
+   "sha256": "5428083e679aac2eb9a24760bf6a97c14984e04fe7fc03537a62be4743663715"
+  },
+  {
+   "file": "own_06.txt",
+   "kind": "varied",
+   "form": "instructions for using a shared printer",
+   "sha256": "79d3d5f6e91beed6ca312d74dc3bcbab2ef45ba90e8fff5337d3ccb6838bb95b"
+  },
+  {
+   "file": "own_07.txt",
+   "kind": "varied",
+   "form": "short restaurant review",
+   "sha256": "e7ee2c7990706b36601d762c8f3930a62d1c9c163836ae131b34346ae66e7851"
+  },
+  {
+   "file": "own_08.txt",
+   "kind": "plain",
+   "form": "simple account of taking the bus to class",
+   "sha256": "f6a88c7b564dc9dca628f706277d249acf1400c35a1a60e4a8b78d0dce04bed2"
+  },
+  {
+   "file": "own_09.txt",
+   "kind": "plain",
+   "form": "simple account of cooking dinner for friends",
+   "sha256": "9a76cfad239f1be69aec2b29605041e9b409d4ceffc8fd08e84287b5c78e08dc"
+  },
+  {
+   "file": "own_10.txt",
+   "kind": "plain",
+   "form": "simple description of a part-time job",
+   "sha256": "28f20c9d1fdcda3fb3b69e9552583338858fc535973ae0dab8ac80bfe268a79c"
+  }
+ ]
+}
